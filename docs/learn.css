@@ -36,3 +36,6 @@
 @media (max-width: 800px) { .top3 { grid-template-columns: 1fr; } .learn .toc ol { columns: 1; } .learn .two-col { grid-template-columns: 1fr; } }
 @media print { .learn .callout, .learn .toc, .t3, .learn-card { background: #fff !important; color: #111 !important; border-color: #999 !important; } .learn * { color: #111 !important; } .site-nav, .pager { display: none !important; } }
 .learn a.learn-card { color: var(--text-secondary); } .learn a.learn-card strong { color: var(--text-primary); }
+
+.learn .case-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.learn .case-actions .btn { text-decoration: none; display: inline-block; }

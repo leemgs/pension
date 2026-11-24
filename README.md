@@ -20,6 +20,7 @@
     ├── compare.html             # 저장 시나리오 나란히 비교
     ├── taxrates.js              # 연도별 보험료율·기준값 (2024~2027)
     ├── help.js                  # 입력 항목 도움말 문구
+    ├── cases.js                 # 가이드 사례(연금저축 55세/65세 수령) 재현용 상태
     ├── analysis.js              # 위험 경고·비교·스트레스·민감도 분석
     ├── compare.js               # 비교 페이지 로직
     ├── guide.html               # 사용 가이드 (빠른 시작)
@@ -71,7 +72,7 @@
 | 연금·투자 가이드 | `docs/learn.html` (하위: `learn-top3.html`, `learn-guide.html`, `learn-accounts.html`) |
 
 시뮬레이터 안의 영역은 `index.html#kpi-area`, `#cif-chart`, `#detail-table`, `#target-panel`, `#settings-panel`, `#scenario-panel`로,
-시나리오는 `index.html?preset=1`~`3`으로 바로 열 수 있습니다.
+시나리오는 `index.html?preset=1`~`3`, 가이드 사례는 `index.html?case=pension-55` / `?case=pension-65`, 사례 비교는 `compare.html?cases=pension-55,pension-65`로 바로 열 수 있습니다.
 
 ## 프리셋
 

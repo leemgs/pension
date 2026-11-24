@@ -37,6 +37,9 @@
     var list = [];
     if (last && last.state) list.push({ name: "▶ 현재 작업 중인 상태", state: last.state });
     presets.forEach(function (p) { list.push({ name: p.name, state: p.state }); });
+    if (window.SimulatorCases) {
+      window.SimulatorCases.list.forEach(function (c) { list.push({ name: "📘 가이드: " + c.title, state: c.build(E), caseId: c.id }); });
+    }
     return list;
   }
 
@@ -84,7 +87,7 @@
     });
     var metrics = [
       ["월평균 세후 실수령", "avgNet", 1, 2], ["65세 월 실수령", "age65Net", 1, 2], ["75세 월 실수령", "age75Net", 1, 2],
-      ["월평균 세금·보험료 등", "avgCost", -1, 2], ["실효 차감률(%)", "effRate", -1, 1],
+      ["월평균 세금·보험료 등", "avgCost", -1, 2], ["총 세금 합계(전 기간)", "totalTax", -1, 2], ["실효 차감률(%)", "effRate", -1, 1],
       ["종료 금융자산", "finalFinancial", 1, 0], ["종료 순자산", "finalNetWorth", 1, 0],
       ["소득 공백(년)", "gapYears", -1, 0],
     ];
@@ -115,6 +118,8 @@
     list.forEach(function (s, i) {
       var l = document.createElement("label"); l.className = "pick";
       var c = document.createElement("input"); c.type = "checkbox"; c.value = i;
+      var want = new URLSearchParams(location.search).get("cases");
+      if (want) { c.checked = !!s.caseId && want.split(",").indexOf(s.caseId) !== -1; } else
       c.checked = list.length > 3 ? (i >= (list[0].name.indexOf("▶") === 0 ? 1 : 0) && i < (list[0].name.indexOf("▶") === 0 ? 4 : 3)) : true;
       c.addEventListener("change", render);
       l.appendChild(c); l.appendChild(document.createTextNode(" " + s.name));

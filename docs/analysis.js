@@ -87,6 +87,7 @@
       avgNet: s.avgNetCif,
       avgGross: s.avgGrossCif,
       avgCost: s.avgMonthlyCost,
+      totalTax: rec.reduce((a, r) => a + r.tax * 12, 0),
       effRate: s.effectiveDeductionRate,
       age65Net: s.age65NetCif,
       age75Net: s.age75NetCif,

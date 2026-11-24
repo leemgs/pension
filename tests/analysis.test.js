@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const sb = { console, setTimeout };
 sb.globalThis = sb;
 vm.createContext(sb);
-for (const f of ["taxrates", "engine", "analysis"]) {
+for (const f of ["taxrates", "engine", "cases", "analysis"]) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "docs", f + ".js"), "utf-8"), sb);
 }
 const E = sb.SimulatorEngine, A = sb.SimulatorAnalysis;
@@ -151,4 +151,19 @@ test("목표 역산: 금융자산이 없으면 안내", async () => {
   ["dcPension", "irp", "pensionSavings", "stockPortfolio", "privatePension"].forEach((k) => { st.assets[k].enabled = false; });
   const r = await A.solveReverse(E, st, 5);
   assert.strictEqual(r.ok, false);
+});
+
+test("가이드 사례: 55세/65세 수령 총 세금이 가이드 숫자(1,045만원/880만원)와 일치", () => {
+  const C = sb.SimulatorCases;
+  assert.ok(C && C.list.length >= 2);
+  for (const c of C.list) {
+    const st = c.build(E);
+    const sim = E.runSimulation(clone(st));
+    const total = sim.yearlyRecords.reduce((a, r) => a + r.tax * 12, 0);
+    assert.ok(Math.abs(total - c.expectTotalTax) < 1e-6, `${c.id}: ${total} != ${c.expectTotalTax}`);
+    const gross = sim.yearlyRecords.reduce((a, r) => a + r.grossCif * 12, 0);
+    assert.ok(Math.abs(gross - 200) < 1e-6, "수령 총액 2억원");
+    assert.strictEqual(A.summarizeScenario(E, st).totalTax.toFixed(2), c.expectTotalTax.toFixed(2));
+  }
+  assert.ok(C.get("pension-65").expectTotalTax < C.get("pension-55").expectTotalTax);
 });

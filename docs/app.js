@@ -3591,6 +3591,24 @@
     if (note) note.hidden = !(mcKey && mcKey !== JSON.stringify(currentState));
   }
 
+  // ---- 가이드 사례 배너 ----
+  let activeCase = null;
+  function renderCaseBanner(sim) {
+    const box = document.getElementById("caseBanner");
+    if (!box) return;
+    if (!activeCase) { box.hidden = true; return; }
+    const total = sim.yearlyRecords.reduce((a, r) => a + r.tax * 12, 0);
+    const match = activeCase.expectTotalTax !== undefined && Math.abs(total - activeCase.expectTotalTax) < 0.005;
+    box.hidden = false;
+    box.innerHTML = `<div><strong>📘 가이드 사례: ${esc(activeCase.title)}</strong>
+      <p>${esc(activeCase.desc)}</p>
+      <p>이 시뮬레이션의 총 연금소득세: <strong>${Math.round(total * 100) / 100}백만원 (${Math.round(total * 100)}만원)</strong>${
+        activeCase.expectTotalTax !== undefined ? ` · 가이드 ${Math.round(activeCase.expectTotalTax * 100)}만원 ${match ? "✓ 일치" : "(값을 바꾸면 달라집니다)"}` : ""}</p>
+      <p><a href="${activeCase.guide}">가이드 해당 부분 보기</a> · <a href="compare.html?cases=pension-55,pension-65">두 사례 나란히 비교</a></p></div>
+      <button type="button" class="btn" id="caseClose" aria-label="사례 안내 닫기">✕</button>`;
+    document.getElementById("caseClose").addEventListener("click", () => { activeCase = null; box.hidden = true; });
+  }
+
   function performRenderNow() {
     renderRafId = null;
     latestSimResult = window.SimulatorEngine.runSimulation(currentState);
@@ -3602,6 +3620,7 @@
     renderPrintSummary();
     scheduleStrategies();
     markMcStale();
+    renderCaseBanner(latestSimResult);
   }
 
   function recalculateAndRender(immediate = false) {
@@ -3808,6 +3827,19 @@
     rebuildAllControls();
     initEventListeners();
     recalculateAndRender();
+
+    // 딥링크: index.html?case=pension-55 → 학습 자료의 사례를 시뮬레이터로 재현
+    try {
+      const cid = new URLSearchParams(location.search).get("case");
+      const c = cid && window.SimulatorCases ? window.SimulatorCases.get(cid) : null;
+      if (c) {
+        currentState = mergeWithDefaultState(deepClone(c.build(window.SimulatorEngine)));
+        activeCase = c;
+        rebuildAllControls();
+        recalculateAndRender(true);
+        setSaveStatus(`가이드 사례 '${c.title}' (저장되지 않음)`);
+      }
+    } catch (_) {}
 
     // 딥링크: index.html?preset=2 → 이름이 "2."로 시작하는 프리셋을 자동 적용
     try {
