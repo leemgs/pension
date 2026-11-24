@@ -18,6 +18,7 @@
     priv: "#6366f1",    // 개인연금
     stock: "#f59e0b",   // 주식투자액
     housing: "#ec4899", // 주택연금
+    isa: "#84cc16",     // ISA
   };
 
   let currentState = window.SimulatorEngine.createDefaultState();
@@ -36,6 +37,7 @@
     pensionSavings: true,
     privatePension: false,
     stockPortfolio: false,
+    isa: true,
     housing: false,
   };
 
@@ -204,13 +206,19 @@
     );
   }
 
+  // 딥링크(?case=, ?preset=)로 연 화면은 '보기 전용'입니다: 사용자의 마지막 작업 상태를 덮어쓰지 않도록
+  // 마지막 상태(localStorage·서버) 저장을 하지 않습니다. 시나리오 저장(프리셋)은 그대로 동작합니다.
+  let ephemeralView = false;
+
   function saveToLocalStorageOnly() {
     try {
-      const wrapper = {
-        updatedAt: new Date().toISOString(),
-        state: currentState,
-      };
-      localStorage.setItem(STORAGE_KEY_LAST, JSON.stringify(wrapper));
+      if (!ephemeralView) {
+        const wrapper = {
+          updatedAt: new Date().toISOString(),
+          state: currentState,
+        };
+        localStorage.setItem(STORAGE_KEY_LAST, JSON.stringify(wrapper));
+      }
       localStorage.setItem(STORAGE_KEY_PRESETS, JSON.stringify(savedPresets));
     } catch (_) { }
   }
@@ -218,6 +226,10 @@
   // 상태 변경 시 자동 저장 (디바운스)
   function scheduleAutoSave() {
     saveToLocalStorageOnly();
+    if (ephemeralView) {
+      setSaveStatus("보기 전용 사례 (내 작업 상태는 그대로 보존됨)");
+      return;
+    }
     setSaveStatus("변경사항 저장 중...", true);
 
     if (saveTimer) clearTimeout(saveTimer);
@@ -247,7 +259,7 @@
   // 창 종료 직전 마지막 세팅 즉시 전송 보장
   window.addEventListener("beforeunload", () => {
     saveToLocalStorageOnly();
-    if (serverAvailable && navigator.sendBeacon) {
+    if (!ephemeralView && serverAvailable && navigator.sendBeacon) {
       const blob = new Blob([JSON.stringify({ state: currentState })], {
         type: "application/json",
       });
@@ -2064,6 +2076,62 @@
         },
       },
       {
+        key: "isa",
+        title: "6-1. ISA (개인종합자산관리계좌)",
+        color: ASSET_COLORS.isa,
+        badgeFn: (a) =>
+          a.enabled
+            ? `${a.currentBalance > 0 ? `현재 ${fmtKoreanMoneyHint(a.currentBalance)} · ` : ""}월 ${fmtKoreanMoneyHint(a.monthlyContrib)} 납입 · 만기 후 연금 이전 ${a.transferRatio}%`
+            : "사용 안 함",
+        buildBody: (body, a, rerender) => {
+          const note = document.createElement("div");
+          note.style.cssText = "padding: 6px 10px; background: rgba(132, 204, 22, 0.08); border: 1px solid rgba(132, 204, 22, 0.3); border-radius: 6px; font-size: 11.5px; line-height: 1.5; color: #d9f99d;";
+          note.innerHTML = "만기(의무 가입기간)마다 이익을 정산합니다: 비과세 한도까지는 무세금, 초과분은 9.9% 분리과세. 정산한 자금은 연금저축으로 이전(이전액의 10%, 연 최대 300만원 세액공제)하거나 현금으로 인출하고, 나머지는 재가입합니다. 연금저축 이전은 <b>연금저축 자산이 켜져 있을 때만</b> 적용됩니다.";
+          body.appendChild(note);
+          const slider = (label, key, min, max, step, unit, extra = {}) =>
+            body.appendChild(
+              createSliderNumberRow({
+                label, value: a[key], min, max, step, unit, ...extra,
+                onChange: (v) => {
+                  a[key] = v;
+                  updateAssetBadges();
+                  recalculateAndRender();
+                  scheduleAutoSave();
+                },
+              })
+            );
+          slider("현재 ISA 평가액 (백만원)", "currentBalance", 0, 300, 1, "백만", { isMoney: true });
+          slider("평가액 중 납입 원금 비중 (%)", "currentPrincipalRatio", 50, 100, 1, "%");
+          slider("월 납입액 (백만원)", "monthlyContrib", 0, 5, 0.05, "백만", { isMoney: true });
+          slider("납입 종료 나이", "contribEndAge", 40, 75, 1, "세");
+          slider("연 납입한도 (백만원)", "annualLimit", 0, 40, 1, "백만", { isMoney: true });
+          slider("총 납입한도 (백만원)", "totalLimit", 0, 200, 5, "백만", { isMoney: true });
+          slider("ISA 연 수익률 (자본, %)", "returnRate", -5, 12, 0.1, "%");
+          slider("ISA 연 배당·분배 수익률 (%)", "dividendRate", 0, 8, 0.1, "%");
+          slider("첫 만기까지 남은 기간 (년)", "maturityYears", 1, 10, 1, "년");
+          slider("재가입 주기 (의무 가입기간, 년)", "termYears", 3, 10, 1, "년");
+          body.appendChild(
+            createSelectRow({
+              label: "ISA 비과세 한도",
+              value: String(a.exemptLimit),
+              options: [
+                { value: "2", label: "일반형 200만원" },
+                { value: "4", label: "서민형 400만원" },
+                { value: "5", label: "일반형 500만원 (개정안 기준)" },
+                { value: "10", label: "서민형 1,000만원 (개정안 기준)" },
+              ],
+              onChange: (v) => {
+                a.exemptLimit = Number(v);
+                recalculateAndRender();
+                scheduleAutoSave();
+              },
+            })
+          );
+          slider("만기 자금 중 연금저축 이전 비율 (%)", "transferRatio", 0, 100, 5, "%");
+          slider("만기 자금 중 현금 인출 비율 (%)", "withdrawRatio", 0, 100, 5, "%");
+        },
+      },
+      {
         key: "housing",
         title: "7. 거주주택 (주택연금화 옵션)",
         color: ASSET_COLORS.housing,
@@ -2298,6 +2366,9 @@
       stockPortfolio: `현재 ${fmtKoreanMoneyHint(
         a.stockPortfolio.currentBalance
       )} · 배당 ${a.stockPortfolio.dividendRate}%`,
+      isa: a.isa.enabled
+        ? `${a.isa.currentBalance > 0 ? `현재 ${fmtKoreanMoneyHint(a.isa.currentBalance)} · ` : ""}월 ${fmtKoreanMoneyHint(a.isa.monthlyContrib)} 납입 · 만기 후 연금 이전 ${a.isa.transferRatio}%`
+        : "사용 안 함",
       housing: a.housing.useReverseMortgage
         ? `시세 ${fmtKoreanMoneyHint(a.housing.currentMarketPrice)} · ${a.housing.rmStartAge
         }세 주택연금`
@@ -2422,6 +2493,7 @@
         <td class="cif-cell" data-age="${r.age}" data-asset="ps" style="cursor: pointer; text-decoration: underline dotted;">${fmtMillion(r.ps)}</td>
         <td class="cif-cell" data-age="${r.age}" data-asset="priv" style="cursor: pointer; text-decoration: underline dotted;">${fmtMillion(r.priv)}</td>
         <td class="cif-cell" data-age="${r.age}" data-asset="stock" style="cursor: pointer; text-decoration: underline dotted;">${fmtMillion(r.stock)}</td>
+        <td class="cif-cell" data-age="${r.age}" data-asset="isa" style="cursor: pointer; text-decoration: underline dotted;">${fmtMillion(r.isa)}</td>
         <td class="cif-cell" data-age="${r.age}" data-asset="housingRm" style="cursor: pointer; text-decoration: underline dotted;">${fmtMillion(r.housingRm)}</td>
         <td class="col-cif-val" style="font-weight: 700; color: #f8fafc;">${fmtMillion(r.grossCif)}</td>
         <td class="col-cif-val tax-cell" data-age="${r.age}" style="color: #fda4af; cursor: pointer; text-decoration: underline dotted;">-${fmtMillion(r.tax)}</td>
@@ -2560,6 +2632,7 @@
       { key: "ps", color: ASSET_COLORS.ps },
       { key: "priv", color: ASSET_COLORS.priv },
       { key: "stock", color: ASSET_COLORS.stock },
+      { key: "isa", color: ASSET_COLORS.isa },
       { key: "housingRm", color: ASSET_COLORS.housing },
     ];
 
@@ -2691,6 +2764,7 @@
       { key: "irp", label: "IRP", color: ASSET_COLORS.irp },
       { key: "ps", label: "연금저축", color: ASSET_COLORS.ps },
       { key: "stock", label: "주식투자", color: ASSET_COLORS.stock },
+      { key: "isa", label: "ISA", color: ASSET_COLORS.isa },
     ];
     if (showHouseInBalanceChart) {
       balKeys.push({
@@ -2813,6 +2887,7 @@
           { label: "연금저축", val: r.ps, color: ASSET_COLORS.ps },
           { label: "개인연금", val: r.priv, color: ASSET_COLORS.priv },
           { label: "주식(배당+매도)", val: r.stock, color: ASSET_COLORS.stock },
+          { label: "ISA 만기 인출", val: r.isa, color: ASSET_COLORS.isa },
           { label: "주택연금", val: r.housingRm, color: ASSET_COLORS.housing },
         ];
 
@@ -3089,7 +3164,19 @@
       cell.addEventListener("mousemove", (e) => {
         let contentHtml = "";
 
-        if (assetKey === "salary") {
+        if (assetKey === "isa") {
+          contentHtml = `
+            <div class="tt-title">${r.age}세 (${r.year}년) ISA 만기 정산 상세</div>
+            <div class="tt-row"><span>현금 인출(월평균):</span><strong>${fmtKoreanMoneyHint(r.isa)} / 월</strong></div>
+            <div class="tt-divider"></div>
+            <div class="tt-row"><span>├ 연금저축 이전액(연):</span><strong>${fmtKoreanMoneyHint(r.isaTransfer)}</strong></div>
+            <div class="tt-row"><span>├ 만기 이익 과세(연):</span><strong>-${fmtKoreanMoneyHint(r.isaTax)}</strong></div>
+            <div class="tt-row"><span>├ 이전 추가 세액공제(연):</span><strong>${fmtKoreanMoneyHint(r.isaCredit)}</strong></div>
+            <div class="tt-row"><span>└ 기말 ISA 잔액:</span><strong>${fmtKoreanMoneyHint(r.balances.isa)}</strong></div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 5px; line-height: 1.4;">
+              * 만기 때만 인출·이전이 일어납니다. 이익 중 비과세 한도 초과분에 9.9% 분리과세, 이전액의 10%(연 최대 300만원) 세액공제(그 해 소득세 한도 내).
+            </div>`;
+        } else if (assetKey === "salary") {
           const sd = d.salary;
           contentHtml = `
             <div class="tt-title">${r.age}세 (${r.year}년) 근로소득(급여) 계산 상세</div>
@@ -3602,12 +3689,19 @@
     if (!activeCase) { box.hidden = true; return; }
     const total = sim.yearlyRecords.reduce((a, r) => a + r.tax * 12, 0);
     const match = activeCase.expectTotalTax !== undefined && Math.abs(total - activeCase.expectTotalTax) < 0.005;
+    let resultLine;
+    if (typeof activeCase.check === "function") {
+      const chk = activeCase.check(sim);
+      resultLine = `이 시뮬레이션: <strong>${esc(chk.text)}</strong> ${chk.ok ? "✓ 일치" : "(값을 바꾸면 달라집니다)"}`;
+    } else {
+      resultLine = `이 시뮬레이션의 총 연금소득세: <strong>${Math.round(total * 100) / 100}백만원 (${Math.round(total * 100)}만원)</strong>${
+        activeCase.expectTotalTax !== undefined ? ` · 가이드 ${Math.round(activeCase.expectTotalTax * 100)}만원 ${match ? "✓ 일치" : "(값을 바꾸면 달라집니다)"}` : ""}`;
+    }
     box.hidden = false;
     box.innerHTML = `<div><strong>📘 가이드 사례: ${esc(activeCase.title)}</strong>
       <p>${esc(activeCase.desc)}</p>
-      <p>이 시뮬레이션의 총 연금소득세: <strong>${Math.round(total * 100) / 100}백만원 (${Math.round(total * 100)}만원)</strong>${
-        activeCase.expectTotalTax !== undefined ? ` · 가이드 ${Math.round(activeCase.expectTotalTax * 100)}만원 ${match ? "✓ 일치" : "(값을 바꾸면 달라집니다)"}` : ""}</p>
-      <p><a href="${activeCase.guide}">가이드 해당 부분 보기</a> · <a href="compare.html?cases=pension-55,pension-65">두 사례 나란히 비교</a></p></div>
+      <p>${resultLine}</p>
+      <p><a href="${activeCase.guide}">가이드 해당 부분 보기</a>${activeCase.expectTotalTax !== undefined ? ` · <a href="compare.html?cases=pension-55,pension-65">두 사례 나란히 비교</a>` : ""}</p></div>
       <button type="button" class="btn" id="caseClose" aria-label="사례 안내 닫기">✕</button>`;
     document.getElementById("caseClose").addEventListener("click", () => { activeCase = null; box.hidden = true; });
   }
@@ -3838,9 +3932,10 @@
       if (c) {
         currentState = mergeWithDefaultState(deepClone(c.build(window.SimulatorEngine)));
         activeCase = c;
+        ephemeralView = true;
         rebuildAllControls();
         recalculateAndRender(true);
-        setSaveStatus(`가이드 사례 '${c.title}' (저장되지 않음)`);
+        setSaveStatus(`가이드 사례 '${c.title}' (보기 전용 · 내 작업 상태는 보존됨)`);
       }
     } catch (_) {}
 
@@ -3851,9 +3946,10 @@
         const hit = savedPresets.find((p) => String(p.name).startsWith(want + "."));
         if (hit) {
           currentState = mergeWithDefaultState(deepClone(hit.state));
+          ephemeralView = true;
           rebuildAllControls();
           recalculateAndRender();
-          setSaveStatus(`'${hit.name}' 불러옴`);
+          setSaveStatus(`'${hit.name}' 불러옴 (보기 전용 · 내 작업 상태는 보존됨)`);
         }
       }
     } catch (_) {}

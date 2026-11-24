@@ -14,6 +14,7 @@
 ├── tests/
 │   ├── engine.test.js           # 계산 엔진 단위 테스트
 │   ├── analysis.test.js         # 경고·스트레스·비교·인출방식·몬테카를로 테스트
+│   ├── isa.test.js              # ISA 계좌 모델 검증
 │   ├── verification.test.js     # 세금·건보료 손계산/공표값 검증
 │   └── site.test.js             # 내부 링크·앵커·메타 무결성
 └── docs/

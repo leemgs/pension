@@ -109,6 +109,7 @@
       if (a.returnRate !== undefined && a.growthReturnRate === undefined) a.returnRate += d;
     }
     if (st.assets.privatePension && st.assets.privatePension.returnRate !== undefined) st.assets.privatePension.returnRate += d;
+    if (st.assets.isa && st.assets.isa.returnRate !== undefined) st.assets.isa.returnRate += d;
     if (st.assets.stockPortfolio) st.assets.stockPortfolio.priceReturnRate += d;
     return st;
   }
@@ -178,6 +179,23 @@
      [a.stockPortfolio, "currentBalance", "주식 평가액"], [a.housing, "currentMarketPrice", "거주주택 시세"]].forEach(([o, k, name]) => {
       if (on(o) && o[k] >= 5000) add("warn", `${name}이(가) ${o[k]}백만원(${(o[k] / 100).toFixed(0)}억원)입니다. 단위(백만원)가 맞는지 확인하세요.`);
     });
+
+    // ISA 설정 점검
+    const ia = a.isa;
+    if (on(ia) && ia.enabled) {
+      if (ia.monthlyContrib * 12 > ia.annualLimit + 1e-9 && ia.monthlyContrib > 0) {
+        add("info", `ISA 월 납입액(${ia.monthlyContrib}백만원)의 연 합계가 연 납입한도(${ia.annualLimit}백만원)를 넘어 초과분은 납입되지 않습니다.`);
+      }
+      if ((ia.transferRatio || 0) + (ia.withdrawRatio || 0) > 100) {
+        add("info", "ISA 만기 자금의 연금저축 이전 비율과 현금 인출 비율의 합이 100%를 넘어 인출 비율이 줄어듭니다.");
+      }
+      if ((ia.transferRatio || 0) > 0 && !(a.pensionSavings && a.pensionSavings.enabled)) {
+        add("warn", "ISA 만기 자금을 연금저축으로 이전하도록 설정했지만 연금저축 자산이 꺼져 있어 이전되지 않습니다. 연금저축을 켜세요.");
+      }
+      if (ia.currentBalance + ia.monthlyContrib > 0 && (ia.returnRate || 0) + (ia.dividendRate || 0) > 8) {
+        add("warn", `ISA의 연 수익률 가정이 ${((ia.returnRate || 0) + (ia.dividendRate || 0)).toFixed(1)}%로 높습니다. 장기 평균으로는 낙관적일 수 있습니다.`);
+      }
+    }
 
     // 낙관적 수익률
     [[a.dcPension, "퇴직연금 DC"], [a.irp, "IRP"], [a.pensionSavings, "연금저축"], [a.privatePension, "개인연금"]].forEach(([o, name]) => {

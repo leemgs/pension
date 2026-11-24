@@ -156,7 +156,7 @@ test("목표 역산: 금융자산이 없으면 안내", async () => {
 test("가이드 사례: 55세/65세 수령 총 세금이 가이드 숫자(1,045만원/880만원)와 일치", () => {
   const C = sb.SimulatorCases;
   assert.ok(C && C.list.length >= 2);
-  for (const c of C.list) {
+  for (const c of C.list.filter((x) => x.expectTotalTax !== undefined)) {
     const st = c.build(E);
     const sim = E.runSimulation(clone(st));
     const total = sim.yearlyRecords.reduce((a, r) => a + r.tax * 12, 0);
@@ -192,4 +192,21 @@ test("세금 기준선: 배당 2,000만원 초과·근접, 사적연금 1,500만
   assert.ok(!near.some((x) => x.level === "warn"));
   // 원본 불변
   const before = JSON.stringify(hi); A.analyzeThresholds(E, hi); assert.strictEqual(JSON.stringify(hi), before);
+});
+
+test("가이드 사례: ISA 3년 납입 후 연금저축 이전 → 6,000만원 이전, 세액공제 한도 300만원", () => {
+  const c = sb.SimulatorCases.get("isa-transfer");
+  const r = c.check(E.runSimulation(clone(c.build(E))));
+  assert.strictEqual(r.ok, true, r.text);
+});
+
+test("입력 점검: ISA 설정 오류(이전 불가·한도 초과)를 알려 준다", () => {
+  const st = E.createDefaultState();
+  assert.ok(!A.analyzeInputs(st).some((x) => x.text.includes("ISA")), "ISA 꺼짐: 경고 없음");
+  st.assets.isa.enabled = true;
+  st.assets.isa.monthlyContrib = 3; // 연 36 > 20
+  st.assets.pensionSavings.enabled = false;
+  const txt = A.analyzeInputs(st).map((x) => x.text).join("\n");
+  assert.ok(txt.includes("연 납입한도"));
+  assert.ok(txt.includes("연금저축 자산이 꺼져"));
 });

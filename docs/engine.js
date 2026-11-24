@@ -178,6 +178,24 @@
           foreignStockRatio: 40,
           cifMode: "manual", // "manual"(직접 설정) | "auto"(목표 CIF 자동조절) // 해외주식 비중 (%, 매도차익 250만원 공제 후 22% 양도세 반영용)
         },
+        // 6-1. ISA (개인종합자산관리계좌): 만기마다 이익 정산(비과세 한도 + 초과분 9.9% 분리과세) 후 연금계좌 이전/인출/재가입
+        isa: {
+          enabled: false,
+          currentBalance: 0, // 현재 평가액 (백만원)
+          currentPrincipalRatio: 100, // 평가액 중 납입 원금 비중 (%)
+          monthlyContrib: 1.5, // 월 납입액 (백만원)
+          contribEndAge: 58, // 납입 종료 나이
+          annualLimit: 20.0, // 연 납입한도 (백만원 = 2,000만원)
+          totalLimit: 100.0, // 총 납입한도 (백만원 = 1억원)
+          returnRate: 4.0, // 연 수익률(자본, %)
+          dividendRate: 1.0, // 연 배당·분배 수익률(계좌 내 재투자, %)
+          maturityYears: 3, // 첫 만기까지 남은 기간(년)
+          termYears: 3, // 이후 재가입 주기(의무 가입기간, 년)
+          exemptLimit: 2.0, // 비과세 한도 (백만원: 일반형 2.0, 서민형 4.0)
+          transferRatio: 100, // 만기 자금 중 연금저축으로 이전하는 비율 (%)
+          withdrawRatio: 0, // 만기 자금 중 현금으로 인출하는 비율 (%), 나머지는 재가입
+          cifMode: "manual",
+        },
         // 7. 거주주택 (주택연금화 옵션)
         housing: {
           enabled: true,
@@ -869,6 +887,11 @@
   // 시뮬레이션 코어 (연 단위 상태 스냅샷 + 목표 CIF 역산 솔버)
   // =========================================================================
 
+  // ISA: 만기 이익 정산(초과분 분리과세, 지방소득세 포함 9.9%), 연금계좌 이전 시 이전금액의 10%(최대 300만원) 추가 세액공제
+  const ISA_TAX_RATE = 0.099;
+  const ISA_TRANSFER_CREDIT_RATE = 0.1;
+  const ISA_TRANSFER_CREDIT_CAP = 3.0;
+
   const ACCOUNT_KEYS = ["dcPension", "irp", "pensionSavings", "privatePension"];
   const SHORT = {
     dcPension: "dc",
@@ -938,6 +961,16 @@
       principal: sb * (num(sp.currentPrincipalRatio, 75) / 100.0),
       annualSellTarget: 0,
     };
+    const ia = assets.isa;
+    const ib = ia && ia.enabled ? num(ia.currentBalance) : 0;
+    const ip = ib * (num(ia && ia.currentPrincipalRatio, 100) / 100.0);
+    s.isa = {
+      bal: ib,
+      principal: ip, // 현재 가입 주기의 원금(이익 계산 기준)
+      contribTotal: ip, // 누적 납입 원금 (총 납입한도 판정)
+      contribYear: 0,
+      monthsLeft: Math.max(1, Math.round(num(ia && ia.maturityYears, 3) * 12)),
+    };
     const hs = assets.housing;
     s.house = {
       price: hs.enabled ? num(hs.currentMarketPrice) : 0,
@@ -956,6 +989,7 @@
         privatePension: { ...s.acc.privatePension },
       },
       stock: { ...s.stock },
+      isa: { ...s.isa },
       house: { ...s.house },
     };
   }
@@ -1073,6 +1107,7 @@ function simulateYear(ctx, s, yIdx, fill) {
       salaryGross: 0, salaryNet: 0, salaryTax: 0, salaryFourMajor: 0,
       np: 0, dc: 0, irp: 0, ps: 0, priv: 0,
       stockDiv: 0, stockSell: 0, foreignGain: 0, rm: 0,
+      isa: 0, isaTax: 0, isaTransfer: 0, isaCredit: 0,
     };
     const fillTotals = {
       dcPension: 0, irp: 0, pensionSavings: 0, privatePension: 0, stockPortfolio: 0,
@@ -1226,6 +1261,48 @@ function simulateYear(ctx, s, yIdx, fill) {
         }
       }
 
+      // 3-1) ISA: 납입 → 계좌 내 운용(과세이연) → 만기 정산 → 연금저축 이전/현금 인출/재가입
+      let mIsa = 0;
+      const ia = assets.isa;
+      if (ia && ia.enabled) {
+        const st = s.isa;
+        if (m === 0) st.contribYear = 0;
+        if (age < num(ia.contribEndAge)) {
+          const room = Math.max(0, num(ia.totalLimit, 100) - st.contribTotal);
+          const yearRoom = Math.max(0, num(ia.annualLimit, 20) - st.contribYear);
+          const c = Math.min(num(ia.monthlyContrib), room, yearRoom);
+          if (c > 0) {
+            st.bal += c;
+            st.principal += c;
+            st.contribTotal += c;
+            st.contribYear += c;
+          }
+        }
+        const totalRet = (num(ia.returnRate) + num(ia.dividendRate)) / 100.0 + shockZ * 0.6;
+        st.bal *= Math.pow(1 + Math.max(-0.99, totalRet), 1 / 12);
+        st.monthsLeft -= 1;
+        if (st.monthsLeft <= 0) {
+          // 만기 정산: 이익 중 비과세 한도 초과분에 9.9% 분리과세 (손실이면 과세 없음)
+          const gain = st.bal - st.principal;
+          const tax = Math.max(0, gain - num(ia.exemptLimit, 2)) * ISA_TAX_RATE;
+          const proceeds = Math.max(0, st.bal - tax);
+          const canTransfer = Boolean(assets.pensionSavings && assets.pensionSavings.enabled);
+          let trRatio = canTransfer ? Math.max(0, Math.min(100, num(ia.transferRatio))) / 100.0 : 0;
+          let wdRatio = Math.max(0, Math.min(100, num(ia.withdrawRatio))) / 100.0;
+          if (trRatio + wdRatio > 1) wdRatio = 1 - trRatio;
+          const transfer = proceeds * trRatio;
+          const payout = proceeds * wdRatio;
+          st.bal = proceeds - transfer - payout; // 남은 금액은 새 가입 주기로 재가입(원금 = 잔액)
+          st.principal = st.bal;
+          st.monthsLeft = Math.max(1, Math.round(num(ia.termYears, 3) * 12));
+          if (transfer > 0) s.acc.pensionSavings.bal += transfer;
+          mIsa = payout;
+          sums.isaTax += tax;
+          sums.isaTransfer += transfer;
+          sums.isaCredit += transfer * ISA_TRANSFER_CREDIT_RATE;
+        }
+      }
+
       // 4) 거주주택 + 주택연금 (대출잔액 누적: 지급액 + 이자/보증료)
       let mRm = 0;
       if (hs.enabled) {
@@ -1329,10 +1406,11 @@ function simulateYear(ctx, s, yIdx, fill) {
       sums.stockDiv += mDiv;
       sums.stockSell += mSell;
       sums.rm += mRm;
+      sums.isa += mIsa;
 
       // 개인연금은 확정 기간 월 지급 수령액(CIF)으로만 관리하며, 잔여 금융자산/순자산 원금 평가액에서는 제외
       const fin =
-        s.acc.dcPension.bal + s.acc.irp.bal + s.acc.pensionSavings.bal + s.stock.bal;
+        s.acc.dcPension.bal + s.acc.irp.bal + s.acc.pensionSavings.bal + s.stock.bal + s.isa.bal;
       const houseEquity = Math.max(0, s.house.price - s.house.loan);
 
       months.push({
@@ -1352,13 +1430,15 @@ function simulateYear(ctx, s, yIdx, fill) {
         stockDiv: mDiv,
         stockSell: mSell,
         housingRm: mRm,
-        grossCif: salaryGrossMonthly + mNp + acc.dc + acc.irp + acc.ps + acc.priv + mDiv + mSell + mRm,
+        isa: mIsa,
+        grossCif: salaryGrossMonthly + mNp + acc.dc + acc.irp + acc.ps + acc.priv + mDiv + mSell + mRm + mIsa,
         balances: {
           dc: s.acc.dcPension.bal,
           irp: s.acc.irp.bal,
           ps: s.acc.pensionSavings.bal,
           priv: s.acc.privatePension.bal,
           stock: s.stock.bal,
+          isa: s.isa.bal,
           house: s.house.price,
           rmLoan: s.house.loan,
           houseEquity,
@@ -1423,9 +1503,21 @@ function simulateYear(ctx, s, yIdx, fill) {
       taxConfig
     );
 
+    // ISA 만기 연금계좌 이전 추가 세액공제: 이전금액의 10%(연 최대 300만원), 그 해 납부할 소득세 한도 내(환급 없음)
+    const isaCreditApplied = Math.min(
+      sums.isaCredit,
+      ISA_TRANSFER_CREDIT_CAP,
+      Math.max(0, taxAndNhis.monthlyTax * 12.0)
+    );
+    if (isaCreditApplied > 0) {
+      taxAndNhis.monthlyTax -= isaCreditApplied / 12.0;
+      taxAndNhis.totalMonthlyCost -= isaCreditApplied / 12.0;
+    }
+    taxAndNhis.isaCreditApplied = isaCreditApplied;
+
     const annualGross =
       sums.salaryGross + sums.np + sums.dc + sums.irp + sums.ps + sums.priv +
-      sums.stockDiv + sums.stockSell + sums.rm;
+      sums.stockDiv + sums.stockSell + sums.rm + sums.isa;
     const avgGross = annualGross / 12.0;
     const avgNet = avgGross - taxAndNhis.totalMonthlyCost;
 
@@ -1520,6 +1612,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
       ps: conv(b.ps, f),
       priv: conv(b.priv, f),
       stock: conv(b.stock, f),
+      isa: conv(b.isa || 0, f),
       house: conv(b.house, f),
       rmLoan: conv(b.rmLoan, f),
       houseEquity: conv(b.houseEquity, f),
@@ -1601,6 +1694,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
             ps: conv(item.ps, f),
             priv: conv(item.priv, f),
             stock: conv(item.stock, f),
+            isa: conv(item.isa || 0, f),
             stockDiv: conv(item.stockDiv, f),
             stockSell: conv(item.stockSell, f),
             housingRm: conv(item.housingRm, f),
@@ -1648,11 +1742,13 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
             ps: conv(num(assets.pensionSavings.enabled ? assets.pensionSavings.currentBalance : 0), yf),
             priv: conv(num(assets.privatePension.enabled ? assets.privatePension.currentBalance : 0), yf),
             stock: conv(num(assets.stockPortfolio.enabled ? assets.stockPortfolio.currentBalance : 0), yf),
+            isa: conv(num(assets.isa && assets.isa.enabled ? assets.isa.currentBalance : 0), yf),
             financialTotal: conv(
               (assets.dcPension.enabled ? num(assets.dcPension.currentBalance) : 0) +
               (assets.irp.enabled ? num(assets.irp.currentBalance) : 0) +
               (assets.pensionSavings.enabled ? num(assets.pensionSavings.currentBalance) : 0) +
-              (assets.stockPortfolio.enabled ? num(assets.stockPortfolio.currentBalance) : 0),
+              (assets.stockPortfolio.enabled ? num(assets.stockPortfolio.currentBalance) : 0) +
+              (assets.isa && assets.isa.enabled ? num(assets.isa.currentBalance) : 0),
               yf
             ),
             houseEquity: conv(
@@ -1664,6 +1760,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
               (assets.irp.enabled ? num(assets.irp.currentBalance) : 0) +
               (assets.pensionSavings.enabled ? num(assets.pensionSavings.currentBalance) : 0) +
               (assets.stockPortfolio.enabled ? num(assets.stockPortfolio.currentBalance) : 0) +
+              (assets.isa && assets.isa.enabled ? num(assets.isa.currentBalance) : 0) +
               (assets.housing.enabled ? num(assets.housing.currentMarketPrice) : 0),
               yf
             ),
@@ -1677,6 +1774,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
         ps: curBal.ps - prevBal.ps,
         priv: curBal.priv - prevBal.priv,
         stock: curBal.stock - prevBal.stock,
+        isa: curBal.isa - (prevBal.isa || 0),
         financialTotal: curBal.financialTotal - prevBal.financialTotal,
         houseEquity: curBal.houseEquity - prevBal.houseEquity,
         netWorth: curBal.netWorth - prevBal.netWorth,
@@ -1697,6 +1795,10 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
         stockDiv: conv(yr.sums.stockDiv / 12, yf),
         stockSell: conv(yr.sums.stockSell / 12, yf),
         housingRm: conv(yr.sums.rm / 12, yf),
+        isa: conv(yr.sums.isa / 12, yf),
+        isaTax: conv(yr.sums.isaTax, yf),
+        isaTransfer: conv(yr.sums.isaTransfer, yf),
+        isaCredit: conv(tx.isaCreditApplied || 0, yf),
         grossCif: grossAvg,
         tax: mTaxAvg,
         nhis: mNhisAvg,
