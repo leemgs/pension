@@ -17,6 +17,7 @@
     ├── index.html               # 시뮬레이터 (진입점)
     ├── scenarios.html           # 시나리오 소개 (?preset=1~3 딥링크)
     ├── compare.html             # 저장 시나리오 나란히 비교
+    ├── taxrates.js              # 연도별 보험료율·기준값 (2024~2027)
     ├── help.js                  # 입력 항목 도움말 문구
     ├── analysis.js              # 위험 경고·비교·스트레스·민감도 분석
     ├── compare.js               # 비교 페이지 로직

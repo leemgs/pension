@@ -75,7 +75,11 @@
     def.target.priorityOrder = window.SimulatorEngine.normalizeOrder(
       def.target.priorityOrder
     );
-    if (target.taxConfig) Object.assign(def.taxConfig, target.taxConfig);
+    if (target.taxConfig) {
+      // 예전 저장본(rateYear 없음)은 당시 요율로 고정해 결과가 달라지지 않게 함
+      window.SimulatorEngine.migrateTaxConfig(target.taxConfig);
+      Object.assign(def.taxConfig, target.taxConfig);
+    }
     if (target.assets) {
       for (const key of Object.keys(def.assets)) {
         if (target.assets[key]) {
@@ -644,6 +648,68 @@
       })
     );
 
+    // 세법·보험료율 기준 연도 선택 (taxrates.js)
+    const TRr = window.SimulatorTaxRates;
+    if (TRr) {
+      const yrOpts = TRr.list().map((y) => ({
+        value: String(y),
+        label: `${y}년 기준${TRr.isPartial(y) ? " (일부 미확정)" : ""}${y === TRr.latest ? " · 최신" : ""}`,
+      }));
+      yrOpts.push({ value: "custom", label: "직접 입력 / 저장 당시 값 유지" });
+      let yearSelectEl = null;
+      let yearInfoEl = null;
+      const yearRow = (
+        createSelectRow({
+          label: "보험료율 기준 연도",
+          value: String(tax.rateYear),
+          options: yrOpts,
+          onChange: (v) => {
+            window.SimulatorEngine.applyRateYear(tax, v);
+            renderGlobalConfig();
+            recalculateAndRender();
+            scheduleAutoSave();
+          },
+        })
+      );
+      container.appendChild(yearRow);
+      yearSelectEl = yearRow.querySelector("select");
+      const info = document.createElement("div");
+      info.className = "range-msg";
+      info.style.color = "#94a3b8";
+      info.textContent = tax.rateYear === "custom"
+        ? "저장된 값을 그대로 사용 중입니다. 아래 값을 직접 고칠 수 있고, 연도를 고르면 해당 연도 값으로 채워집니다."
+        : TRr.note(tax.rateYear);
+      container.appendChild(info);
+      yearInfoEl = info;
+      const rateRows = [
+        ["건강보험료율 (직장·지역 공통)", "nhisRate", 5, 9, 0.01, "%"],
+        ["장기요양보험료율 (건강보험료 대비)", "ltciRateOfNhis", 8, 18, 0.01, "%"],
+        ["지역 재산 부과점수당 금액", "nhisPointValue", 150, 280, 0.1, "원"],
+        ["국민연금 근로자 부담률", "npEmployeeRate", 3, 7, 0.05, "%"],
+        ["국민연금 기준소득월액 상한 (월)", "npMonthlyCap", 4, 9, 0.01, "백만"],
+      ];
+      for (const [label, key, mn, mx, st, un] of rateRows) {
+        container.appendChild(
+          createSliderNumberRow({
+            label,
+            value: tax[key],
+            min: mn,
+            max: mx,
+            step: st,
+            unit: un,
+            onChange: (v) => {
+              tax[key] = v;
+              tax.rateYear = "custom";
+              if (yearSelectEl) yearSelectEl.value = "custom";
+              if (yearInfoEl) yearInfoEl.textContent = "직접 수정한 값을 사용 중입니다. 연도를 다시 고르면 해당 연도 값으로 채워집니다.";
+              recalculateAndRender();
+              scheduleAutoSave();
+            },
+          })
+        );
+      }
+    }
+
     container.appendChild(
       createSelectRow({
         label: "사적연금 연 1,500만원 초과 시 과세 방식",
@@ -1156,7 +1222,7 @@
           const updateSalaryInfoBox = () => {
             const gross = Number(a.monthlyGrossSalary) || 0;
             const salCalc = window.SimulatorEngine.calcEarnedIncomeMonthly
-              ? window.SimulatorEngine.calcEarnedIncomeMonthly(gross, 1.5)
+              ? window.SimulatorEngine.calcEarnedIncomeMonthly(gross, 1.5, currentState.taxConfig)
               : { netMonthly: gross * 0.82, fourMajorTotal: gross * 0.09, taxMonthly: gross * 0.09 };
             infoBox.innerHTML = `
               <div style="font-weight: 700; color: #5eead4; margin-bottom: 2px;">💡 급여 실수령액 및 공제 자동계산</div>

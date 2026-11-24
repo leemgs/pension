@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const sb = { console };
 sb.globalThis = sb;
 vm.createContext(sb);
-for (const f of ["engine", "analysis"]) {
+for (const f of ["taxrates", "engine", "analysis"]) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "docs", f + ".js"), "utf-8"), sb);
 }
 const E = sb.SimulatorEngine, A = sb.SimulatorAnalysis;

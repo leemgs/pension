@@ -7,6 +7,23 @@
 (function (global) {
   "use strict";
 
+  // 연도별 요율표 (taxrates.js가 먼저 로드되어야 합니다)
+  function TR() {
+    if (!global.SimulatorTaxRates) throw new Error("taxrates.js를 engine.js보다 먼저 불러와야 합니다.");
+    return global.SimulatorTaxRates;
+  }
+
+  /** 예전에 저장된 상태(rateYear 없음)는 당시 요율로 고정해 결과가 바뀌지 않게 합니다. */
+  function migrateTaxConfig(tc) {
+    if (!tc || tc.rateYear !== undefined) return tc;
+    var L = TR().legacy;
+    tc.rateYear = "custom";
+    ["nhisRate", "ltciRateOfNhis", "nhisPointValue", "npEmployeeRate", "npMonthlyCap"].forEach(function (k) {
+      if (tc[k] === undefined) tc[k] = L[k];
+    });
+    return tc;
+  }
+
   // 기본 초기 상태
   function createDefaultState() {
     return {
@@ -35,8 +52,13 @@
         extraDependents: 0, // 추가 부양가족 수 (1인당 150만원)
         includePrivatePensionInNHIS: false, // 지역건보료 소득 산정 시 사적연금 포함 여부 (현행 실무는 공적연금 50%만 반영)
         includePropertyTaxInCost: true, // 거주주택 보유 재산세를 월간 발생비용에 포함할지 여부
-        nhisRate: 7.09, // 건강보험료율 (%)
-        ltciRateOfNhis: 12.95, // 노인장기요양보험료율 (건보료 대비 %)
+        // 연도별 보험료율은 taxrates.js 기준 (rateYear: 적용 연도 또는 "custom")
+        rateYear: TR().latest,
+        nhisRate: TR().get(TR().latest).nhisRate, // 건강보험료율 (%)
+        ltciRateOfNhis: TR().get(TR().latest).ltciRateOfNhis, // 노인장기요양보험료율 (건보료 대비 %)
+        nhisPointValue: TR().get(TR().latest).nhisPointValue, // 지역가입자 재산 점수당 금액 (원)
+        npEmployeeRate: TR().get(TR().latest).npEmployeeRate, // 국민연금 근로자 부담률 (%)
+        npMonthlyCap: TR().get(TR().latest).npMonthlyCap, // 국민연금 기준소득월액 상한 (백만원)
       },
       assets: {
         // 0. 근로소득 (은퇴 전 또는 재취업 기간 급여 - 몇 년 동안 월 얼마)
@@ -313,7 +335,12 @@
    * 근로소득의 월 4대보험(근로자부담분) 및 근로소득세/지방소득세 산출
    * grossMonthly: 세전 월 급여 (백만원)
    */
-  function calcEarnedIncomeMonthly(grossMonthly, personalDeduction = 1.5) {
+  function calcEarnedIncomeMonthly(grossMonthly, personalDeduction = 1.5, rates = null) {
+    const R = rates || TR().get(TR().latest);
+    const nhisPct = R.nhisRate !== undefined ? R.nhisRate : 7.09;
+    const ltciPct = R.ltciRateOfNhis !== undefined ? R.ltciRateOfNhis : 12.95;
+    const npPct = R.npEmployeeRate !== undefined ? R.npEmployeeRate : 4.5;
+    const npCap = R.npMonthlyCap !== undefined ? R.npMonthlyCap : 6.17;
     if (grossMonthly <= 0) {
       return {
         grossMonthly: 0,
@@ -331,12 +358,12 @@
     const annualGross = grossMonthly * 12.0;
 
     // 1) 4대보험 (근로자 부담분)
-    // 국민연금: 4.5% (기준소득월액 상한액 6.17백만원 반영)
-    const pensionPart = Math.min(grossMonthly, 6.17) * 0.045;
-    // 건강보험: 3.545%
-    const healthPart = grossMonthly * 0.03545;
-    // 노인장기요양보험: 건보료의 12.95%
-    const ltciPart = healthPart * 0.1295;
+    // 국민연금: 근로자 부담률 (기준소득월액 상한액 반영)
+    const pensionPart = Math.min(grossMonthly, npCap) * (npPct / 100.0);
+    // 건강보험: 보험료율의 절반(근로자 부담)
+    const healthPart = grossMonthly * (nhisPct / 2 / 100.0);
+    // 노인장기요양보험: 건보료의 일정 비율
+    const ltciPart = healthPart * (ltciPct / 100.0);
     // 고용보험: 0.9%
     const employPart = grossMonthly * 0.009;
     const fourMajorTotal = pensionPart + healthPart + ltciPart + employPart;
@@ -414,7 +441,7 @@
     { maxBase: Infinity, points: 2250 },
   ];
 
-  function calcNhisPropertyMonthly(marketPrice, officialPriceRatio) {
+  function calcNhisPropertyMonthly(marketPrice, officialPriceRatio, pointValue = 208.4) {
     if (marketPrice <= 0) return 0;
     const officialPrice = marketPrice * (officialPriceRatio / 100.0);
     // 건보료 재산과표는 지방세법상 재산세 과세표준(공시가격 × 60%) 적용 후 1억원(100.0 백만원) 기본공제
@@ -429,8 +456,8 @@
         break;
       }
     }
-    // 점수당 208.4원 -> 백만원 단위로 변환 (points * 208.4 / 1,000,000)
-    return (points * 208.4) / 1000000.0;
+    // 점수당 금액(원) -> 백만원 단위로 변환 (points * 금액 / 1,000,000)
+    return (points * pointValue) / 1000000.0;
   }
 
   /**
@@ -696,8 +723,8 @@
     const nhisAnnualAssessedIncome =
       nhisPublicPensionIncome + nhisFinancialIncome + nhisPrivatePensionIncome;
 
-    const nhisRate = (taxConfig.nhisRate || 7.09) / 100.0;
-    const ltciRate = (taxConfig.ltciRateOfNhis || 12.95) / 100.0;
+    const nhisRate = (taxConfig.nhisRate || TR().legacy.nhisRate) / 100.0;
+    const ltciRate = (taxConfig.ltciRateOfNhis || TR().legacy.ltciRateOfNhis) / 100.0;
 
     // 연 소득 336만원(3.36 백만원) 이하 시 소득 최저보험료(월 19,780원 = 0.01978 백만원) 적용
     let monthlyNhisIncomePart = 0;
@@ -710,7 +737,8 @@
     // 주택 재산 건보료 (월)
     const monthlyNhisPropertyPart = calcNhisPropertyMonthly(
       houseMarketPrice,
-      houseOfficialRatio
+      houseOfficialRatio,
+      taxConfig.nhisPointValue || TR().legacy.nhisPointValue
     );
 
     let monthlyBaseNhis = monthlyNhisIncomePart + monthlyNhisPropertyPart;
@@ -992,7 +1020,7 @@ function simulateYear(ctx, s, yIdx, fill) {
     );
     if (isEmployed) {
       salaryGrossMonthly = num(ei.monthlyGrossSalary);
-      salaryCalcResult = calcEarnedIncomeMonthly(salaryGrossMonthly, 1.5);
+      salaryCalcResult = calcEarnedIncomeMonthly(salaryGrossMonthly, 1.5, taxConfig);
       salaryNetMonthly = salaryCalcResult.netMonthly;
       salaryTaxMonthly = salaryCalcResult.taxMonthly;
       salaryFourMajorMonthly = salaryCalcResult.fourMajorTotal;
@@ -1403,6 +1431,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
   function runSimulation(state, opts = {}) {
     const lite = Boolean(opts.lite);
     const meta = state.meta;
+    migrateTaxConfig(state.taxConfig);
     const taxConfig = state.taxConfig;
     const assets = state.assets;
     const target = normalizeTarget(state);
@@ -1792,6 +1821,16 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
   // 탐색 변수: 자동조절 자산 인출 우선순위(순열), 국민연금 개시나이, 주택연금 가입 여부/개시나이
   // =========================================================================
 
+  /** 기준 연도를 바꿔 요율 5종을 한 번에 채웁니다. year가 "custom"이면 값은 그대로 둡니다. */
+  function applyRateYear(taxConfig, year) {
+    if (year === "custom") { taxConfig.rateYear = "custom"; return taxConfig; }
+    const r = TR().get(Number(year));
+    if (!r) return taxConfig;
+    Object.assign(taxConfig, r);
+    taxConfig.rateYear = Number(year);
+    return taxConfig;
+  }
+
   function permutations(arr) {
     if (arr.length <= 1) return [arr.slice()];
     const out = [];
@@ -1909,6 +1948,8 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
   global.SimulatorEngine = {
     createDefaultState,
     getSamplePresets,
+    migrateTaxConfig,
+    applyRateYear,
     estimateReverseMortgageMonthly,
     runSimulation,
     optimizeCombination,
@@ -1922,6 +1963,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
       calcEarnedIncomeDeduction,
       calcNhisPropertyMonthly,
       calcMonthlyHousingPropertyTax,
+      calcEarnedIncomeMonthly,
     },
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -13,7 +13,11 @@
     });
     return out;
   }
-  function full(state) { return merge(E.createDefaultState(), JSON.parse(JSON.stringify(state))); }
+  function full(state) {
+    var st = JSON.parse(JSON.stringify(state));
+    if (st.taxConfig) E.migrateTaxConfig(st.taxConfig); // 예전 저장본은 당시 요율 유지
+    return merge(E.createDefaultState(), st);
+  }
 
   async function loadScenarios() {
     var presets = null, last = null;

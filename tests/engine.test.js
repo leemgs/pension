@@ -9,6 +9,7 @@ const src = fs.readFileSync(path.join(__dirname, "..", "docs", "engine.js"), "ut
 const sandbox = { console };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "docs", "taxrates.js"), "utf-8"), sandbox);
 vm.runInContext(src, sandbox);
 const E = sandbox.SimulatorEngine;
 const I = E._internal;
@@ -71,4 +72,37 @@ test("샘플 프리셋 모두 실행되고 유한한 결과", () => {
     assert.ok(Number.isFinite(r.summary.avgNetCif), "avgNetCif");
     assert.ok(Number.isFinite(r.summary.finalNetWorth), "finalNetWorth");
   }
+});
+
+test("요율표: 장기요양 비율이 공표 요율과 일치하고 연도 전환이 결과에 반영된다", () => {
+  const TR = sandbox.SimulatorTaxRates;
+  // 장기요양(소득 대비 %) = 건보료율 × 비율: 2025 0.9182%, 2026 0.9448%
+  near(TR.get(2025).nhisRate * TR.get(2025).ltciRateOfNhis / 100, 0.9182, 0.0005);
+  near(TR.get(2026).nhisRate * TR.get(2026).ltciRateOfNhis / 100, 0.9448, 0.0005);
+  assert.strictEqual(E.createDefaultState().taxConfig.rateYear, TR.latest);
+
+  const st25 = E.createDefaultState();
+  E.applyRateYear(st25.taxConfig, 2025);
+  const st26 = E.createDefaultState();
+  const a = E.runSimulation(JSON.parse(JSON.stringify(st25)));
+  const b = E.runSimulation(JSON.parse(JSON.stringify(st26)));
+  assert.ok(b.summary.avgMonthlyCost > a.summary.avgMonthlyCost, "2026 요율이 더 높은 비용");
+});
+
+test("예전 저장본(rateYear 없음)은 당시 요율로 고정된다", () => {
+  const legacy = E.createDefaultState();
+  delete legacy.taxConfig.rateYear;
+  legacy.taxConfig.nhisRate = 7.09; legacy.taxConfig.ltciRateOfNhis = 12.95;
+  delete legacy.taxConfig.nhisPointValue; delete legacy.taxConfig.npEmployeeRate; delete legacy.taxConfig.npMonthlyCap;
+  E.migrateTaxConfig(legacy.taxConfig);
+  assert.strictEqual(legacy.taxConfig.rateYear, "custom");
+  assert.strictEqual(legacy.taxConfig.nhisPointValue, 208.4);
+  assert.strictEqual(legacy.taxConfig.npEmployeeRate, 4.5);
+});
+
+test("근로자 4대보험: 국민연금 상한과 건보료 절반 부담", () => {
+  const r = I.calcEarnedIncomeMonthly(10, 1.5, { nhisRate: 7.19, ltciRateOfNhis: 13.14, npEmployeeRate: 4.75, npMonthlyCap: 6.59 });
+  near(r.pensionPart, 6.59 * 0.0475);
+  near(r.healthPart, 10 * 0.0719 / 2);
+  near(r.ltciPart, r.healthPart * 0.1314);
 });

@@ -197,6 +197,13 @@
     // 물가·보험료율
     if (m.inflationRate === 0) add("info", "물가상승률이 0%입니다. 장기 계산에서는 구매력이 과대평가됩니다.");
     if (m.inflationRate > 5) add("info", `물가상승률이 ${m.inflationRate}%로 높습니다. 의도한 값인지 확인하세요.`);
+    const TRr = global.SimulatorTaxRates;
+    if (TRr && tx.nhisRate !== undefined) {
+      const L = TRr.get(TRr.latest);
+      if (tx.rateYear !== TRr.latest && (tx.nhisRate !== L.nhisRate || tx.nhisPointValue !== L.nhisPointValue || tx.ltciRateOfNhis !== L.ltciRateOfNhis)) {
+        add("info", `보험료율이 ${TRr.latest}년 값(건보 ${L.nhisRate}%, 장기요양 ${L.ltciRateOfNhis}%)과 다릅니다. 저장 당시 요율을 쓰는 중이면 설정에서 '보험료율 기준 연도'를 ${TRr.latest}년으로 바꿔 최신 요율을 적용하세요.`);
+      }
+    }
     if (tx.nhisRate && (tx.nhisRate < 5 || tx.nhisRate > 9.5)) add("warn", `건강보험료율이 ${tx.nhisRate}%입니다. 최근 법정 요율(약 7%대)과 크게 다릅니다.`);
 
     // 개시 나이가 현재 나이보다 이전
