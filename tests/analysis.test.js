@@ -69,3 +69,24 @@ test("입력 점검: 단위 실수·낙관적 수익률·범위 밖 개시 나�
   assert.ok(txt.includes("수령 가능 범위"));
   assert.ok(txt.includes("건강보험료율"));
 });
+
+test("인출 방식 비교: 5개 행, 원본 상태 불변, 방식 변경이 결과에 영향", () => {
+  const st = E.createDefaultState();
+  const before = JSON.stringify(st);
+  const res = A.runWithdrawalStrategies(E, st);
+  assert.strictEqual(res.applicable, true);
+  assert.strictEqual(res.rows.length, 5);
+  assert.strictEqual(JSON.stringify(st), before);
+  const uniq = new Set(res.rows.map((r) => r.avgNet.toFixed(6)));
+  assert.ok(uniq.size > 1, "방식에 따라 결과가 달라져야 함");
+  assert.ok(res.rows.every((r) => Number.isFinite(r.finalFinancial) && Number.isFinite(r.age85Net)));
+  // 현재 설정 행은 기본 요약과 동일
+  near0(res.rows[0].avgNet, A.summarizeScenario(E, st).avgNet);
+});
+
+test("인출 방식 비교: 목표 CIF 자동조절이 켜져 있으면 비교 불가", () => {
+  const st = E.createDefaultState();
+  st.target.enabled = true;
+  assert.strictEqual(A.runWithdrawalStrategies(E, st).applicable, false);
+});
+function near0(a, b) { assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`); }

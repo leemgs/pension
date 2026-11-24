@@ -3421,6 +3421,49 @@
     setTimeout(() => window.print(), 50);
   }
 
+  // ---- 인출 방식 비교 ----
+  let strategyTimer = null;
+  function scheduleStrategies() {
+    const det = document.getElementById("strategyPanel");
+    if (!det || !det.open || !window.SimulatorAnalysis) return;
+    clearTimeout(strategyTimer);
+    strategyTimer = setTimeout(renderStrategies, 500);
+  }
+
+  function renderStrategies() {
+    const out = document.getElementById("strategyBody");
+    if (!out) return;
+    const res = window.SimulatorAnalysis.runWithdrawalStrategies(window.SimulatorEngine, currentState);
+    if (!res.applicable) {
+      out.innerHTML = currentState.target.enabled
+        ? '<p class="hint">목표 CIF 자동조절이 켜져 있으면 인출 방식이 자동으로 정해지므로 비교하지 않습니다. 자동조절을 끄면 비교할 수 있습니다.</p>'
+        : '<p class="hint">비교할 계좌(퇴직연금 DC·IRP·연금저축, 평가액 > 0)가 없습니다.</p>';
+      return;
+    }
+    const cols = [
+      ["월평균 실수령", "avgNet", 1, 2], ["75세 월 실수령", "age75Net", 1, 2], ["85세 월 실수령", "age85Net", 1, 2],
+      ["평균 세금·보험료", "avgCost", -1, 2], ["종료 금융자산", "finalFinancial", 1, 0], ["소득 공백(년)", "gapYears", -1, 0],
+    ];
+    const best = {};
+    cols.forEach(([, k, dir]) => {
+      const vals = res.rows.map((r) => r[k]);
+      best[k] = dir > 0 ? Math.max(...vals) : Math.min(...vals);
+    });
+    const names = { dcPension: "퇴직연금 DC", irp: "IRP", pensionSavings: "연금저축" };
+    out.innerHTML = `
+      <p class="hint">대상: ${res.accounts.map((k) => names[k]).join(" · ")} (현재가치 기준, 백만원). 초록색이 가장 유리한 값입니다.</p>
+      <div class="table-wrapper"><table class="sim-table"><thead><tr><th>방식</th><th>설명</th>
+        ${cols.map((c) => `<th>${c[0]}</th>`).join("")}<th>자산 소진</th></tr></thead><tbody>
+        ${res.rows.map((r) => `<tr><td><strong>${r.label}</strong></td><td style="text-align:left">${r.note}</td>
+          ${cols.map(([, k, , d]) => {
+            const same = res.rows.every((x) => Math.abs(x[k] - r[k]) < 1e-9);
+            return `<td class="${!same && Math.abs(r[k] - best[k]) < 1e-9 ? "pos" : ""}">${r[k].toFixed(d)}</td>`;
+          }).join("")}
+          <td>${r.depletionAge ? r.depletionAge + "세 소진" : "유지"}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="hint">수령 기간·월 인출액·인출 비율은 각 계좌에 입력한 값을 그대로 씁니다. 방식마다 값이 달라지면 결과가 달라지므로 우열은 입력값에 따라 바뀔 수 있습니다.</p>`;
+  }
+
   function performRenderNow() {
     renderRafId = null;
     latestSimResult = window.SimulatorEngine.runSimulation(currentState);
@@ -3430,6 +3473,7 @@
     renderWarnings(latestSimResult);
     scheduleStress();
     renderPrintSummary();
+    scheduleStrategies();
   }
 
   function recalculateAndRender(immediate = false) {
@@ -3611,6 +3655,9 @@
       const spp = document.getElementById("stressPanel");
       if (spp && !spp.open) { spp.open = true; renderStress(); }
     });
+
+    const stp = document.getElementById("strategyPanel");
+    if (stp) stp.addEventListener("toggle", () => { if (stp.open) renderStrategies(); });
 
     const sp = document.getElementById("stressPanel");
     if (sp) sp.addEventListener("toggle", () => { if (sp.open) renderStress(); });

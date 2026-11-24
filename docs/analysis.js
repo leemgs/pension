@@ -221,5 +221,29 @@
     return out;
   }
 
-  global.SimulatorAnalysis = { analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
+  /** 계좌형 연금(DC·IRP·연금저축)의 인출 방식만 바꿔 같은 조건에서 비교합니다. 세부 값(수령 기간·금액·비율)은 입력값을 그대로 씁니다. */
+  function runWithdrawalStrategies(E, state) {
+    const keys = ["dcPension", "irp", "pensionSavings"].filter((k) => state.assets[k] && state.assets[k].enabled !== false && state.assets[k].currentBalance > 0);
+    const defs = [
+      { mode: null, label: "현재 설정", note: "입력한 인출 방식 그대로" },
+      { mode: "period", label: "기간 분할", note: "입력한 수령 기간 동안 균등 인출" },
+      { mode: "fixed", label: "월 정액", note: "입력한 월 인출액을 소진 시까지" },
+      { mode: "rate", label: "연 정률", note: "입력한 비율을 매년 잔액에서 인출" },
+      { mode: "income_only", label: "수익만 인출", note: "원금 보존, 운용·배당수익만" },
+    ];
+    return {
+      applicable: keys.length > 0 && !(state.target && state.target.enabled),
+      accounts: keys,
+      rows: defs.map((d) => {
+        const st = clone(state);
+        if (d.mode) keys.forEach((k) => { st.assets[k].withdrawalMode = d.mode; });
+        const r = summarizeScenario(E, st);
+        const rec = r.sim.yearlyRecords;
+        const a85 = rec.find((x) => x.age === 85) || rec[rec.length - 1];
+        return Object.assign({ label: d.label, note: d.note, mode: d.mode, age85Net: a85 ? a85.netCif : 0 }, r);
+      }),
+    };
+  }
+
+  global.SimulatorAnalysis = { runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
 })(typeof window !== "undefined" ? window : globalThis);
