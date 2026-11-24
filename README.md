@@ -15,7 +15,8 @@
 └── docs/
     ├── index.html               # 시뮬레이터 (진입점)
     ├── scenarios.html           # 시나리오 소개 (?preset=1~3 딥링크)
-    ├── guide.html               # 사용 가이드
+    ├── guide.html               # 사용 가이드 (빠른 시작)
+    ├── manual.html              # 사용자 매뉴얼 (용어·입력 항목·결과 해석·활용)
     ├── assumptions.html         # 가정·세법 기준
     ├── nav.js                   # 공통 상단 메뉴
     ├── app.js                   # UI 로직
@@ -50,6 +51,7 @@
 | 시뮬레이터 | `docs/index.html` |
 | 시나리오 | `docs/scenarios.html` |
 | 사용 가이드 | `docs/guide.html` |
+| 사용자 매뉴얼 | `docs/manual.html` |
 | 가정·세법 기준 | `docs/assumptions.html` |
 
 시뮬레이터 안의 영역은 `index.html#kpi-area`, `#cif-chart`, `#detail-table`, `#target-panel`, `#settings-panel`, `#scenario-panel`로,
