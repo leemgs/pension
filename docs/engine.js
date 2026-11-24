@@ -381,7 +381,14 @@
     } else {
       taxCredit = 1.3 * 0.55 + (baseTax - 1.3) * 0.3;
     }
-    taxCredit = Math.min(taxCredit, 0.74);
+    // 한도(소득세법 제59조): 총급여 3,300만원 이하 74만원, 7,000만원 이하 74만원-(총급여-3,300만원)×0.8%(최소 66만원),
+    // 1.2억원 이하 66만원-(총급여-7,000만원)×1/2(최소 50만원), 초과 시 50만원-(총급여-1.2억원)×1/2(최소 20만원)
+    let creditCap;
+    if (annualGross <= 33.0) creditCap = 0.74;
+    else if (annualGross <= 70.0) creditCap = Math.max(0.66, 0.74 - (annualGross - 33.0) * 0.008);
+    else if (annualGross <= 120.0) creditCap = Math.max(0.5, 0.66 - (annualGross - 70.0) * 0.5);
+    else creditCap = Math.max(0.2, 0.5 - (annualGross - 120.0) * 0.5);
+    taxCredit = Math.min(taxCredit, creditCap);
 
     const nationalTax = Math.max(0, baseTax - taxCredit);
     const localTax = nationalTax * 0.1; // 지방소득세 10%
@@ -409,36 +416,70 @@
    * 주택 과세표준 = 시세 × 공시가격비율 × 공정시장가액비율(60%)
    * 2024.02 개편 기준 재산 기본공제 1억원(100백만원) 차감 후 잔여 과표 기준 점수 부여
    */
+  // 재산보험료 부과점수표 (국민건강보험법 시행령 별표 4, 2024.5.7 개정 기준 60등급).
+  // maxBase: 재산 과세표준에서 기본공제 1억원을 뺀 금액의 상한(백만원). 출처는 공단 점수표를 인용한 2차 자료 2곳의 일치값이며,
+  // 공단 공식 점수표로 재확인이 필요합니다.
   const NHIS_PROPERTY_BRACKETS = [
     { maxBase: 4.5, points: 22 },
     { maxBase: 9.0, points: 44 },
-    { maxBase: 13.5, points: 64 },
-    { maxBase: 18.0, points: 85 },
-    { maxBase: 23.0, points: 112 },
-    { maxBase: 29.0, points: 138 },
-    { maxBase: 36.0, points: 164 },
-    { maxBase: 45.0, points: 193 },
-    { maxBase: 55.0, points: 224 },
-    { maxBase: 67.0, points: 257 },
-    { maxBase: 81.0, points: 292 },
-    { maxBase: 97.0, points: 325 },
-    { maxBase: 115.0, points: 365 },
-    { maxBase: 135.0, points: 405 },
-    { maxBase: 160.0, points: 450 },
-    { maxBase: 190.0, points: 501 },
-    { maxBase: 230.0, points: 559 },
-    { maxBase: 280.0, points: 624 },
-    { maxBase: 345.0, points: 696 },
-    { maxBase: 425.0, points: 775 },
-    { maxBase: 525.0, points: 864 },
-    { maxBase: 650.0, points: 963 },
-    { maxBase: 800.0, points: 1073 },
-    { maxBase: 1000.0, points: 1196 },
-    { maxBase: 1300.0, points: 1350 },
-    { maxBase: 1700.0, points: 1520 },
-    { maxBase: 2200.0, points: 1710 },
-    { maxBase: 3000.0, points: 1950 },
-    { maxBase: Infinity, points: 2250 },
+    { maxBase: 13.5, points: 66 },
+    { maxBase: 18.0, points: 97 },
+    { maxBase: 22.5, points: 122 },
+    { maxBase: 27.0, points: 146 },
+    { maxBase: 31.5, points: 171 },
+    { maxBase: 36.0, points: 195 },
+    { maxBase: 40.5, points: 219 },
+    { maxBase: 45.0, points: 244 },
+    { maxBase: 50.2, points: 268 },
+    { maxBase: 55.9, points: 294 },
+    { maxBase: 62.2, points: 320 },
+    { maxBase: 69.3, points: 344 },
+    { maxBase: 77.1, points: 365 },
+    { maxBase: 85.9, points: 386 },
+    { maxBase: 95.7, points: 412 },
+    { maxBase: 107.0, points: 439 },
+    { maxBase: 119.0, points: 465 },
+    { maxBase: 133.0, points: 490 },
+    { maxBase: 148.0, points: 516 },
+    { maxBase: 164.0, points: 535 },
+    { maxBase: 183.0, points: 559 },
+    { maxBase: 204.0, points: 586 },
+    { maxBase: 227.0, points: 611 },
+    { maxBase: 253.0, points: 637 },
+    { maxBase: 281.0, points: 659 },
+    { maxBase: 313.0, points: 681 },
+    { maxBase: 349.0, points: 706 },
+    { maxBase: 388.0, points: 731 },
+    { maxBase: 432.0, points: 757 },
+    { maxBase: 481.0, points: 785 },
+    { maxBase: 536.0, points: 812 },
+    { maxBase: 597.0, points: 841 },
+    { maxBase: 665.0, points: 881 },
+    { maxBase: 740.0, points: 921 },
+    { maxBase: 824.0, points: 961 },
+    { maxBase: 918.0, points: 1001 },
+    { maxBase: 1030.0, points: 1041 },
+    { maxBase: 1140.0, points: 1091 },
+    { maxBase: 1270.0, points: 1141 },
+    { maxBase: 1420.0, points: 1191 },
+    { maxBase: 1580.0, points: 1241 },
+    { maxBase: 1760.0, points: 1291 },
+    { maxBase: 1960.0, points: 1341 },
+    { maxBase: 2180.0, points: 1391 },
+    { maxBase: 2420.0, points: 1451 },
+    { maxBase: 2700.0, points: 1511 },
+    { maxBase: 3000.0, points: 1571 },
+    { maxBase: 3300.0, points: 1641 },
+    { maxBase: 3630.0, points: 1711 },
+    { maxBase: 3993.0, points: 1781 },
+    { maxBase: 4392.3, points: 1851 },
+    { maxBase: 4831.53, points: 1921 },
+    { maxBase: 5314.68, points: 1991 },
+    { maxBase: 5846.15, points: 2061 },
+    { maxBase: 6430.77, points: 2131 },
+    { maxBase: 7073.85, points: 2201 },
+    { maxBase: 7781.24, points: 2271 },
+    { maxBase: Infinity, points: 2341 },
   ];
 
   function calcNhisPropertyMonthly(marketPrice, officialPriceRatio, pointValue = 208.4) {
