@@ -38,7 +38,7 @@
   <!-- 메인 레이아웃 -->
   <main class="main-layout">
     <!-- 좌측: 프리셋 관리 + 기본환경 + 자산별 변수 조절 패널 -->
-    <aside class="sidebar-panel">
+    <aside class="sidebar-panel" id="input-area">
       <!-- 1. 상태(프리셋) 저장 및 불러오기 -->
       <section class="panel-box" id="scenario-panel">
         <div class="panel-box-header">
@@ -76,7 +76,7 @@
     </aside>
 
     <!-- 우측: KPI 요약 + 메인 월간 CIF 그래프 + 보조 잔여자산 그래프 + 연도별 상세 표 -->
-    <section class="dashboard-area">
+    <section class="dashboard-area" id="result-area">
       <!-- 상단 핵심 요약 지표 -->
       <div class="kpi-grid" id="kpi-area">
         <div class="kpi-card">
@@ -238,6 +238,14 @@
 
   <!-- 로컬 폴더 동기화 번들 (단독 HTML 실행 시에도 마지막 상태 및 프리셋 재현용) -->
   <script src="data/embedded_state.js" onerror="window.__PORTABLE_STORAGE__ = null;"></script>
+  <!-- 모바일/태블릿 하단 바로가기 -->
+  <div class="mobile-tabbar" role="navigation" aria-label="화면 이동">
+    <a href="#result-area">📊 결과</a>
+    <a href="#cif-chart">📈 그래프</a>
+    <a href="#input-area">⚙️ 입력</a>
+    <a href="#detail-table">📋 표</a>
+  </div>
+
   <script src="nav.js"></script>
   <script src="engine.js"></script>
   <script src="analysis.js"></script>

@@ -862,3 +862,55 @@ html { scroll-behavior: smooth; }
 .stress-body .pos { color: var(--accent-emerald); }
 .stress-body .neg { color: var(--accent-rose); }
 .hint { color: var(--text-muted); font-size: 12px; font-weight: 400; }
+
+/* ===== 모바일/태블릿 최적화 (결과 우선, 입력 패널은 그 아래) ===== */
+.mobile-tabbar { display: none; }
+@media (max-width: 1200px) {
+  .top-header { position: static; }
+  .site-nav { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  .site-nav::-webkit-scrollbar { display: none; }
+  .site-nav a { white-space: nowrap; }
+  .main-layout { padding: 12px; }
+  /* 결과(그래프·요약)를 입력 패널보다 먼저 */
+  .dashboard-area { order: -1; }
+  /* 안쪽 스크롤 제거: 페이지 스크롤 하나로 */
+  .sidebar-panel { max-height: none; overflow: visible; padding-right: 0; }
+  #result-area, #input-area, #cif-chart, #detail-table { scroll-margin-top: 56px; }
+  body { padding-bottom: 64px; }
+  .mobile-tabbar {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    background: var(--bg-panel); border-top: 1px solid var(--border-color);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-tabbar a {
+    flex: 1; text-align: center; padding: 12px 4px; font-size: 13px; font-weight: 700;
+    color: var(--text-secondary); text-decoration: none;
+  }
+  .mobile-tabbar a:active { background: var(--bg-card); color: var(--accent-blue); }
+}
+@media (max-width: 640px) {
+  .top-header { padding: 10px 12px; gap: 8px; }
+  .brand-title h1 { font-size: 17px; }
+  .brand-title p { display: none; }
+  .header-actions .btn { padding: 6px 9px; font-size: 12px; }
+  .kpi-value { font-size: 20px; }
+  .kpi-card { padding: 10px; }
+  .chart-header { flex-direction: column; align-items: stretch; gap: 8px; }
+  .chart-controls { flex-wrap: wrap; }
+  .legend-bar { font-size: 11px; gap: 6px 10px; }
+  .disclaimer { margin: 12px; }
+}
+@media (max-width: 1200px) {
+  .main-layout > * { min-width: 0; }
+  .preset-Save-row { flex-wrap: wrap; }
+  .preset-Save-row .input-text { min-width: 0; flex: 1 1 160px; }
+}
+@media (max-width: 640px) {
+  .brand-area { gap: 8px; }
+  .brand-badge { font-size: 10px; padding: 6px 8px; }
+  .save-status { font-size: 11px; padding: 4px 8px; }
+  .header-actions { gap: 6px; }
+  .header-actions .btn { padding: 5px 8px; font-size: 11px; white-space: nowrap; }
+  .kpi-value { font-size: 16px; overflow-wrap: anywhere; }
+  .kpi-label { font-size: 11.5px; }
+}
