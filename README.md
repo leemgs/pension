@@ -25,6 +25,7 @@
     ├── guide.html               # 사용 가이드 (빠른 시작)
     ├── manual.html              # 사용자 매뉴얼 (용어·입력 항목·결과 해석·활용)
     ├── assumptions.html         # 가정·세법 기준
+    ├── links.html               # 참고 링크 (공식 사이트 모음)
     ├── nav.js                   # 공통 상단 메뉴
     ├── app.js                   # UI 로직
     ├── engine.js                # 시뮬레이션 계산 엔진
@@ -61,6 +62,7 @@
 | 사용 가이드 | `docs/guide.html` |
 | 사용자 매뉴얼 | `docs/manual.html` |
 | 가정·세법 기준 | `docs/assumptions.html` |
+| 참고 링크 | `docs/links.html` |
 
 시뮬레이터 안의 영역은 `index.html#kpi-area`, `#cif-chart`, `#detail-table`, `#target-panel`, `#settings-panel`, `#scenario-panel`로,
 시나리오는 `index.html?preset=1`~`3`으로 바로 열 수 있습니다.

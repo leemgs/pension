@@ -7,6 +7,7 @@
     { href: "guide.html", label: "📖 사용 가이드" },
     { href: "manual.html", label: "📘 사용자 매뉴얼" },
     { href: "assumptions.html", label: "📐 가정·세법 기준" },
+    { href: "links.html", label: "🔗 참고 링크" },
   ];
   var cur = (location.pathname.split("/").pop() || "index.html").toLowerCase();
   var el = document.getElementById("siteNav");
