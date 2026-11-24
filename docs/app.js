@@ -3388,6 +3388,39 @@
       <p class="hint">단위: 백만원(현재가치). 수익률은 계좌형 연금·주식의 자본수익률을 함께 이동합니다. 값이 클수록 그 가정이 결과를 크게 좌우합니다.</p>`;
   }
 
+  // ---- 인쇄용 리포트 ----
+  function renderPrintSummary() {
+    const box = document.getElementById("printSummary");
+    if (!box) return;
+    const m = currentState.meta, tx = currentState.taxConfig;
+    const modeTxt = m.valueMode === "real" ? "현재가치(물가할인)" : "명목가치";
+    const rateTxt = tx.rateYear === "custom" ? "직접 입력/저장 당시 값" : `${tx.rateYear}년 기준`;
+    const rows = [...document.querySelectorAll("#assetCardsContainer .asset-card")].map((c) => {
+      const t = c.querySelector(".asset-title-wrap span:last-child");
+      const b = c.querySelector(".asset-summary-badge");
+      const off = c.classList.contains("disabled-asset");
+      return `<tr><td>${esc(t ? t.textContent : "")}</td><td>${off ? "제외" : esc(b ? b.textContent : "")}</td></tr>`;
+    }).join("");
+    const t = currentState.target;
+    box.innerHTML = `
+      <h1>노후 현금흐름(CIF) 시뮬레이션 리포트</h1>
+      <p class="ps-meta">${esc(m.title || "")} · 작성일 ${new Date().toLocaleDateString("ko-KR")} · 금액 단위 백만원</p>
+      <table class="ps-table"><tbody>
+        <tr><th>계산 기간</th><td>${m.currentAge}세 ~ ${m.endAge}세</td><th>물가상승률</th><td>${m.inflationRate}%</td></tr>
+        <tr><th>값 기준</th><td>${modeTxt}</td><th>보험료율 기준</th><td>${rateTxt} (건보 ${tx.nhisRate}%, 장기요양 ${tx.ltciRateOfNhis}%, 점수당 ${tx.nhisPointValue}원)</td></tr>
+        <tr><th>목표 CIF</th><td>${t.enabled ? `월 ${t.netMonthly}백만원 (${t.measure === "net" ? "세후" : "세전"}, ${t.basis === "real" ? "현재가치" : "명목"}, ${t.startAge}세부터)` : "미설정"}</td><th>사적연금 과세</th><td>${esc(tx.privatePensionOver15MMode)}</td></tr>
+      </tbody></table>
+      <h3>자산별 입력 요약</h3>
+      <table class="ps-table"><tbody>${rows}</tbody></table>`;
+  }
+
+  function printReport() {
+    renderPrintSummary();
+    const sp = document.getElementById("stressPanel");
+    if (sp && !sp.open) { sp.open = true; renderStress(); }
+    setTimeout(() => window.print(), 50);
+  }
+
   function performRenderNow() {
     renderRafId = null;
     latestSimResult = window.SimulatorEngine.runSimulation(currentState);
@@ -3396,6 +3429,7 @@
     drawBalanceChart(latestSimResult);
     renderWarnings(latestSimResult);
     scheduleStress();
+    renderPrintSummary();
   }
 
   function recalculateAndRender(immediate = false) {
@@ -3569,6 +3603,14 @@
     });
 
     bindChartTooltips();
+
+    const pb = document.getElementById("btnPrintReport");
+    if (pb) pb.addEventListener("click", printReport);
+    window.addEventListener("beforeprint", () => {
+      renderPrintSummary();
+      const spp = document.getElementById("stressPanel");
+      if (spp && !spp.open) { spp.open = true; renderStress(); }
+    });
 
     const sp = document.getElementById("stressPanel");
     if (sp) sp.addEventListener("toggle", () => { if (sp.open) renderStress(); });

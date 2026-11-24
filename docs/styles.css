@@ -923,3 +923,42 @@ html { scroll-behavior: smooth; }
 .range-msg { margin-top: 4px; font-size: 11.5px; color: var(--accent-amber); }
 .num-input.invalid { border-color: var(--accent-amber) !important; }
 .control-label-line .help-btn { margin-right: auto; }
+
+/* ===== 인쇄(리포트/PDF) ===== */
+.print-summary { display: none; }
+@page { size: A4 landscape; margin: 10mm; }
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { background: #fff !important; color: #111 !important; }
+  .site-nav, .top-header, .mobile-tabbar, #input-area, .help-btn, .help-pop,
+  #btnExportCsv, .chart-controls, .stress-summary .hint, .legend-bar + .hint { display: none !important; }
+  html, body { overflow: visible !important; height: auto !important; }
+  .main-layout { display: block; padding: 0; }
+  .dashboard-area { display: block; max-height: none !important; overflow: visible !important; height: auto !important; }
+  .print-summary { display: block; margin-bottom: 10px; color: #111; }
+  .print-summary h1 { font-size: 20px; margin-bottom: 2px; }
+  .print-summary h3 { font-size: 13px; margin: 10px 0 4px; }
+  .ps-meta { font-size: 11px; color: #444; margin-bottom: 6px; }
+  .ps-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .ps-table th, .ps-table td { border: 1px solid #999; padding: 3px 6px; text-align: left; color: #111; background: #fff; }
+  .ps-table th { background: #eef2f7; width: 11%; white-space: nowrap; }
+  /* 차트·KPI 카드는 어두운 배경 그대로 인쇄(캔버스 글자색이 밝음) */
+  .kpi-card, .chart-card { break-inside: avoid; margin-bottom: 8px; }
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+  .warnings-box .wn { color: #111; background: #fff; border: 1px solid #bbb; border-left-width: 4px; }
+  .canvas-wrapper { height: 300px; }
+  .canvas-wrapper.secondary-canvas { height: 210px; }
+  /* 표와 가정 흔들어 보기는 흰 배경·검정 글자 */
+  #stressPanel, #detail-table { background: #fff !important; border-color: #999 !important; color: #111 !important; }
+  #stressPanel *, #detail-table * { color: #111 !important; background: transparent !important; border-color: #bbb !important; }
+  .table-wrapper { max-height: none !important; overflow: visible !important; }
+  table.sim-table { font-size: 7.5px; width: 100% !important; min-width: 0 !important; table-layout: auto; }
+  table.sim-table th, table.sim-table td { min-width: 0 !important; width: auto !important; padding: 2px 3px !important; white-space: normal !important; }
+  .tax-badge { font-size: 7px !important; padding: 0 !important; line-height: 1.2 !important; border: 0 !important; }
+  table.sim-table td { line-height: 1.2; }
+  #detail-table .cif-cell, #detail-table .tax-cell, #detail-table .balance-cell, #detail-table .delta-cell { text-decoration: none !important; }
+  table.sim-table thead { display: table-header-group; }
+  table.sim-table tr { break-inside: avoid; }
+  .stress-body .pos { color: #0a7a4a !important; } .stress-body .neg { color: #b4233a !important; }
+  .disclaimer { color: #333; border-color: #999; margin: 8px 0; font-size: 10px; }
+}

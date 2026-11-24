@@ -29,11 +29,17 @@
         📤 상태 파일 불러오기 (.json)
       </label>
       <input type="file" id="fileImportJson" accept=".json" style="display: none;" />
+      <button id="btnPrintReport" class="btn" title="가정·요약·그래프·표를 인쇄하거나 PDF로 저장합니다.">
+        🖨️ 리포트 인쇄/PDF
+      </button>
       <button id="btnResetDefault" class="btn btn-danger" title="모든 변수를 기본 초기값으로 되돌립니다.">
         ↺ 기본값 초기화
       </button>
     </div>
   </header>
+
+  <!-- 인쇄 전용 가정 요약 (화면에서는 숨김) -->
+  <section id="printSummary" class="print-summary" aria-hidden="true"></section>
 
   <!-- 메인 레이아웃 -->
   <main class="main-layout">
