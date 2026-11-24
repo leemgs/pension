@@ -79,5 +79,5 @@
 계산 엔진(`docs/engine.js`)의 세금·공제 함수와 시뮬레이션 불변식을 검증합니다. (Node 18+)
 
 ```bash
-node --test tests/
+node --test
 ```

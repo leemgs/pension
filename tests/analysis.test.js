@@ -1,4 +1,4 @@
-// 실행: node --test tests/
+// 실행: node --test
 const test = require("node:test");
 const assert = require("node:assert");
 const fs = require("node:fs");
