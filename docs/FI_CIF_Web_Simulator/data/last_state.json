@@ -1,0 +1,162 @@
+{
+  "updatedAt": "2026-11-17T13:43:11",
+  "state": {
+    "meta": {
+      "title": "나의 기본 은퇴 현금흐름 플랜",
+      "currentAge": 52,
+      "endAge": 95,
+      "baseYear": 2026,
+      "inflationRate": 2.2,
+      "valueMode": "nominal",
+      "chartInterval": "yearly"
+    },
+    "target": {
+      "enabled": false,
+      "netMonthly": 5,
+      "measure": "net",
+      "basis": "real",
+      "startAge": 60,
+      "priorityOrder": [
+        "stockPortfolio",
+        "pensionSavings",
+        "irp",
+        "dcPension",
+        "privatePension"
+      ],
+      "objective": "netWorth"
+    },
+    "taxConfig": {
+      "privatePensionOver15MMode": "auto",
+      "hasSpouseDeduction": true,
+      "extraDependents": 0,
+      "includePrivatePensionInNHIS": false,
+      "includePropertyTaxInCost": true,
+      "nhisRate": 7.09,
+      "ltciRateOfNhis": 12.95
+    },
+    "assets": {
+      "earnedIncome": {
+        "enabled": true,
+        "startAge": 52,
+        "workYears": 6,
+        "monthlyGrossSalary": 5
+      },
+      "nationalPension": {
+        "enabled": true,
+        "startAge": 65,
+        "baseAge": 65,
+        "applyDeferralRule": true,
+        "monthlyAmountAtStart": 1.65,
+        "linkToInflation": true,
+        "customGrowthRate": 2.2,
+        "taxableRatio": 90
+      },
+      "dcPension": {
+        "enabled": true,
+        "currentBalance": 180,
+        "contribEndAge": 58,
+        "monthlyContrib": 0,
+        "growthRatio": 60,
+        "growthReturnRate": 5,
+        "dividendRatio": 40,
+        "dividendReturnRate": 3.5,
+        "returnRate": 3,
+        "dividendRate": 1.4000000000000001,
+        "startAge": 60,
+        "withdrawalMode": "period",
+        "payoutYears": 20,
+        "fixedMonthly": 1.2,
+        "inflateFixed": false,
+        "withdrawalRate": 5,
+        "severancePrincipalRatio": 65,
+        "cifMode": "manual",
+        "effectiveSeveranceTaxRate": 5.5
+      },
+      "irp": {
+        "enabled": true,
+        "currentBalance": 65,
+        "contribEndAge": 58,
+        "monthlyContrib": 0,
+        "returnRate": 4.2,
+        "dividendRate": 1.8,
+        "startAge": 60,
+        "withdrawalMode": "period",
+        "payoutYears": 20,
+        "fixedMonthly": 0.6,
+        "inflateFixed": false,
+        "withdrawalRate": 5,
+        "capAnnualLimit": true,
+        "maxAnnualPayout": 15,
+        "severancePrincipalRatio": 40,
+        "cifMode": "manual",
+        "effectiveSeveranceTaxRate": 5.5
+      },
+      "pensionSavings": {
+        "enabled": true,
+        "currentBalance": 85,
+        "contribEndAge": 58,
+        "monthlyContrib": 0,
+        "growthRatio": 60,
+        "growthReturnRate": 5,
+        "dividendRatio": 40,
+        "dividendReturnRate": 3.5,
+        "returnRate": 3,
+        "dividendRate": 1.4000000000000001,
+        "startAge": 60,
+        "withdrawalMode": "period",
+        "payoutYears": 25,
+        "fixedMonthly": 0.7,
+        "inflateFixed": false,
+        "withdrawalRate": 5,
+        "capAnnualLimit": true,
+        "maxAnnualPayout": 15,
+        "nonTaxablePrincipalRatio": 10,
+        "cifMode": "manual"
+      },
+      "privatePension": {
+        "enabled": true,
+        "startAge": 60,
+        "payoutYears": 10,
+        "monthlyPayout": 1,
+        "currentBalance": 0,
+        "contribEndAge": 56,
+        "monthlyContrib": 0,
+        "returnRate": 3.5,
+        "dividendRate": 0,
+        "withdrawalMode": "period",
+        "fixedMonthly": 1,
+        "inflateFixed": false,
+        "withdrawalRate": 4.5,
+        "isTaxFree": true,
+        "cifMode": "manual"
+      },
+      "stockPortfolio": {
+        "enabled": true,
+        "currentBalance": 250,
+        "currentPrincipalRatio": 75,
+        "contribEndAge": 58,
+        "monthlyContrib": 0,
+        "priceReturnRate": 4,
+        "dividendRate": 3.8,
+        "startAge": 60,
+        "principalWithdrawalMode": "none",
+        "fixedMonthlySell": 0.5,
+        "sellRate": 3,
+        "foreignStockRatio": 40,
+        "cifMode": "manual"
+      },
+      "housing": {
+        "enabled": true,
+        "currentMarketPrice": 850,
+        "officialPriceRatio": 69,
+        "priceGrowthRate": 2,
+        "useReverseMortgage": true,
+        "rmStartAge": 70,
+        "rmCalcMode": "auto",
+        "rmManualMonthly": 1.8,
+        "rmLoanRate": 4.5,
+        "rmInitialFeeRate": 1.5
+      }
+    }
+  }
+}
