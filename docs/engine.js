@@ -1915,5 +1915,13 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
     normalizeOrder,
     AUTO_CAPABLE,
     AUTO_LABELS,
+    // 단위 테스트용 내부 계산 함수 (UI에서는 사용하지 않음)
+    _internal: {
+      calcPensionIncomeDeduction,
+      calcProgressiveNationalIncomeTax,
+      calcEarnedIncomeDeduction,
+      calcNhisPropertyMonthly,
+      calcMonthlyHousingPropertyTax,
+    },
   };
-})(window);
+})(typeof window !== "undefined" ? window : globalThis);
