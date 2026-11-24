@@ -55,3 +55,17 @@ test("시나리오 요약은 현재가치 기준이며 원본 상태를 바꾸�
   assert.ok(Number.isFinite(s.avgNet) && Number.isFinite(s.finalNetWorth));
   assert.strictEqual(JSON.stringify(st), before);
 });
+
+test("입력 점검: 단위 실수·낙관적 수익률·범위 밖 개시 나이를 알려 준다", () => {
+  const st = E.createDefaultState();
+  assert.strictEqual(A.analyzeInputs(st).filter((x) => x.level === "warn").length, 0, "기본값은 경고 없음");
+  st.assets.earnedIncome.monthlyGrossSalary = 500; // 원 단위로 잘못 입력
+  st.assets.irp.returnRate = 12;
+  st.assets.nationalPension.startAge = 72;
+  st.taxConfig.nhisRate = 70;
+  const txt = A.analyzeInputs(st).map((x) => x.text).join("\n");
+  assert.ok(txt.includes("근로소득 월 급여"));
+  assert.ok(txt.includes("IRP의 연 수익률"));
+  assert.ok(txt.includes("수령 가능 범위"));
+  assert.ok(txt.includes("건강보험료율"));
+});

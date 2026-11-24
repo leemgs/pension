@@ -255,6 +255,33 @@
   // UI 컨트롤 생성 헬퍼
   // =========================================================================
 
+  // 도움말 버튼: 라벨 옆 "?"를 누르면 설명이 펼쳐집니다.
+  function attachHelp(wrap, labelLine, label) {
+    const text = window.SimulatorHelp ? window.SimulatorHelp.find(String(label)) : "";
+    if (!text) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "help-btn";
+    btn.textContent = "?";
+    btn.title = text;
+    btn.setAttribute("aria-label", "도움말: " + label);
+    btn.setAttribute("aria-expanded", "false");
+    const pop = document.createElement("div");
+    pop.className = "help-pop";
+    pop.hidden = true;
+    pop.textContent = text;
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      pop.hidden = !pop.hidden;
+      btn.setAttribute("aria-expanded", String(!pop.hidden));
+    });
+    const first = labelLine.firstChild;
+    if (first && first.nextSibling) labelLine.insertBefore(btn, first.nextSibling);
+    else labelLine.appendChild(btn);
+    wrap.appendChild(pop);
+  }
+
   function createSliderNumberRow({
     label,
     value,
@@ -347,6 +374,19 @@
     };
     wrap.appendChild(labelLine);
     wrap.appendChild(inputsRow);
+    attachHelp(wrap, labelLine, label);
+
+    const rangeMsg = document.createElement("div");
+    rangeMsg.className = "range-msg";
+    rangeMsg.hidden = true;
+    wrap.appendChild(rangeMsg);
+    const checkRange = (v) => {
+      const bad = Number.isFinite(v) && (v < min || v > max);
+      rangeMsg.hidden = !bad;
+      numInput.classList.toggle("invalid", bad);
+      if (bad) rangeMsg.textContent = `⚠️ 권장 범위(${min}~${max}${unit})를 벗어났습니다. 입력값과 단위를 다시 확인하세요.`;
+    };
+    numInput.addEventListener("input", () => checkRange(Number(numInput.value)));
     return wrap;
   }
 
@@ -375,6 +415,7 @@
     });
 
     wrap.appendChild(labelLine);
+    attachHelp(wrap, labelLine, label);
     wrap.appendChild(select);
     return wrap;
   }
@@ -395,6 +436,8 @@
     });
 
     row.appendChild(span);
+    const hp = window.SimulatorHelp ? window.SimulatorHelp.find(String(label)) : "";
+    if (hp) row.title = hp;
     row.appendChild(chk);
     return row;
   }
@@ -3230,7 +3273,8 @@
   function renderWarnings(sim) {
     const box = document.getElementById("warningsBox");
     if (!box || !window.SimulatorAnalysis) return;
-    const items = window.SimulatorAnalysis.analyzeWarnings(sim, currentState);
+    const items = window.SimulatorAnalysis.analyzeInputs(currentState).map((w) => ({ level: w.level, text: "입력 점검: " + w.text }))
+      .concat(window.SimulatorAnalysis.analyzeWarnings(sim, currentState));
     if (!items.length) {
       box.innerHTML = '<div class="wn wn-ok">✅ 소득 공백·자산 소진·목표 미달 등 주요 위험 신호가 발견되지 않았습니다.</div>';
       return;

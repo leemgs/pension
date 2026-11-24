@@ -153,5 +153,66 @@
     };
   }
 
-  global.SimulatorAnalysis = { analyzeWarnings, summarizeScenario, runStress, runSensitivity };
+  /** 입력값의 단위 실수·비현실적 가정을 점검합니다. (계산은 하지 않음) */
+  function analyzeInputs(state) {
+    const out = [];
+    const a = state.assets || {}, m = state.meta || {}, t = state.target || {}, tx = state.taxConfig || {};
+    const on = (x) => x && x.enabled !== false;
+    const add = (level, text) => out.push({ level, text });
+
+    // 단위(백만원) 실수 가능성: 월 금액이 3,000만원 이상
+    const monthly = [
+      [a.earnedIncome, "monthlyGrossSalary", "근로소득 월 급여"],
+      [a.nationalPension, "monthlyAmountAtStart", "국민연금 월 수령액"],
+      [a.privatePension, "monthlyPayout", "개인연금 월 수령액"],
+      [a.housing, "rmManualMonthly", "주택연금 월 수령액"],
+    ];
+    monthly.forEach(([o, k, name]) => {
+      if (on(o) && o[k] >= 30) add("warn", `${name}이(가) ${o[k]}백만원(${o[k] * 100}만원)입니다. 단위가 백만원임을 확인하세요(예: 150만원 = 1.5).`);
+    });
+    if (t.enabled && t.netMonthly >= 30) add("warn", `목표 월 현금흐름이 ${t.netMonthly}백만원입니다. 단위(백만원)를 확인하세요.`);
+
+    // 평가액이 지나치게 큼 (50억원 이상)
+    [[a.dcPension, "currentBalance", "퇴직연금 DC"], [a.irp, "currentBalance", "IRP"], [a.pensionSavings, "currentBalance", "연금저축"],
+     [a.stockPortfolio, "currentBalance", "주식 평가액"], [a.housing, "currentMarketPrice", "거주주택 시세"]].forEach(([o, k, name]) => {
+      if (on(o) && o[k] >= 5000) add("warn", `${name}이(가) ${o[k]}백만원(${(o[k] / 100).toFixed(0)}억원)입니다. 단위(백만원)가 맞는지 확인하세요.`);
+    });
+
+    // 낙관적 수익률
+    [[a.dcPension, "퇴직연금 DC"], [a.irp, "IRP"], [a.pensionSavings, "연금저축"], [a.privatePension, "개인연금"]].forEach(([o, name]) => {
+      if (on(o) && o.currentBalance > 0 && (o.returnRate || 0) + (o.dividendRate || 0) > 8) {
+        add("warn", `${name}의 연 수익률 가정이 ${((o.returnRate || 0) + (o.dividendRate || 0)).toFixed(1)}%로 높습니다. 장기 평균으로는 낙관적일 수 있습니다.`);
+      }
+    });
+    const sp = a.stockPortfolio;
+    if (on(sp) && sp.currentBalance > 0) {
+      const tot = (sp.priceReturnRate || 0) + (sp.dividendRate || 0);
+      if (tot > 10) add("warn", `주식의 연 총수익률 가정이 ${tot.toFixed(1)}%(주가 ${sp.priceReturnRate}% + 배당 ${sp.dividendRate}%)로 높습니다.`);
+      if (sp.dividendRate > 7) add("info", `배당수익률 ${sp.dividendRate}%는 매우 높은 편입니다. 배당 삭감 위험을 고려하세요.`);
+    }
+    if (on(a.housing) && a.housing.priceGrowthRate > (m.inflationRate || 0) + 3) {
+      add("info", `주택가격 상승률(${a.housing.priceGrowthRate}%)이 물가상승률보다 3%p 넘게 높습니다. 보수적으로 가정했는지 확인하세요.`);
+    }
+
+    // 물가·보험료율
+    if (m.inflationRate === 0) add("info", "물가상승률이 0%입니다. 장기 계산에서는 구매력이 과대평가됩니다.");
+    if (m.inflationRate > 5) add("info", `물가상승률이 ${m.inflationRate}%로 높습니다. 의도한 값인지 확인하세요.`);
+    if (tx.nhisRate && (tx.nhisRate < 5 || tx.nhisRate > 9.5)) add("warn", `건강보험료율이 ${tx.nhisRate}%입니다. 최근 법정 요율(약 7%대)과 크게 다릅니다.`);
+
+    // 개시 나이가 현재 나이보다 이전
+    const cur = m.currentAge;
+    [[a.nationalPension, "국민연금"], [a.privatePension, "개인연금"], [a.stockPortfolio, "주식 배당"]].forEach(([o, name]) => {
+      if (on(o) && o.startAge < cur) add("info", `${name} 개시 나이(${o.startAge}세)가 현재 나이(${cur}세)보다 이릅니다. 이미 받고 있는 경우가 아니라면 확인하세요.`);
+    });
+    if (on(a.nationalPension) && (a.nationalPension.startAge < 60 || a.nationalPension.startAge > 70)) {
+      add("warn", `국민연금 개시 나이 ${a.nationalPension.startAge}세는 수령 가능 범위(60~70세) 밖입니다.`);
+    }
+    if (on(a.housing) && a.housing.useReverseMortgage && a.housing.rmStartAge < 55) {
+      add("warn", "주택연금은 만 55세부터 가입할 수 있습니다.");
+    }
+    if (m.endAge <= m.currentAge) add("warn", "종료 나이가 현재 나이보다 크지 않습니다.");
+    return out;
+  }
+
+  global.SimulatorAnalysis = { analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
 })(typeof window !== "undefined" ? window : globalThis);
