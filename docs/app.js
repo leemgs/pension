@@ -125,16 +125,17 @@
     }
 
     // 2) data/embedded_state.js (단독 HTML 실행 또는 다른 PC 이동 직후)
-    if (!loadedLast && window.__PORTABLE_STORAGE__) {
-      if (window.__PORTABLE_STORAGE__.lastState) {
+    //    주의: 내장 프리셋은 브라우저에 저장된 사용자 시나리오가 없을 때만 사용합니다.
+    let embeddedPresets = null;
+    if (window.__PORTABLE_STORAGE__) {
+      if (!loadedLast && window.__PORTABLE_STORAGE__.lastState) {
         loadedLast = window.__PORTABLE_STORAGE__.lastState;
       }
       if (
-        !loadedPresets &&
         Array.isArray(window.__PORTABLE_STORAGE__.presets) &&
         window.__PORTABLE_STORAGE__.presets.length > 0
       ) {
-        loadedPresets = window.__PORTABLE_STORAGE__.presets;
+        embeddedPresets = window.__PORTABLE_STORAGE__.presets;
       }
     }
 
@@ -163,6 +164,8 @@
         }
       }
     } catch (_) { }
+
+    if (!loadedPresets && embeddedPresets) loadedPresets = embeddedPresets;
 
     if (loadedLast) {
       currentState = mergeWithDefaultState(loadedLast);
@@ -3219,12 +3222,70 @@
   // =========================================================================
 
   let renderRafId = null;
+  // ---- 위험 신호 및 가정 흔들어 보기 (analysis.js) ----
+  function esc(t) {
+    return String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function renderWarnings(sim) {
+    const box = document.getElementById("warningsBox");
+    if (!box || !window.SimulatorAnalysis) return;
+    const items = window.SimulatorAnalysis.analyzeWarnings(sim, currentState);
+    if (!items.length) {
+      box.innerHTML = '<div class="wn wn-ok">✅ 소득 공백·자산 소진·목표 미달 등 주요 위험 신호가 발견되지 않았습니다.</div>';
+      return;
+    }
+    const icon = { danger: "🚨", warn: "⚠️", info: "ℹ️" };
+    box.innerHTML = items
+      .map((w) => `<div class="wn wn-${w.level}">${icon[w.level] || ""} ${esc(w.text)}</div>`)
+      .join("");
+  }
+
+  let stressTimer = null;
+  function scheduleStress() {
+    const det = document.getElementById("stressPanel");
+    if (!det || !det.open || !window.SimulatorAnalysis) return;
+    clearTimeout(stressTimer);
+    stressTimer = setTimeout(renderStress, 450);
+  }
+
+  function renderStress() {
+    const A = window.SimulatorAnalysis;
+    const E = window.SimulatorEngine;
+    const out = document.getElementById("stressBody");
+    if (!out) return;
+    const fmt = (v) => v.toFixed(2);
+    const sgn = (v, d = 2) => (v >= 0 ? "+" : "") + v.toFixed(d);
+    const cls = (v) => (Math.abs(v) < 0.005 ? "" : v > 0 ? "pos" : "neg");
+    const st = A.runStress(E, currentState);
+    const sens = A.runSensitivity(E, currentState);
+    const dep = (a) => (a ? `${a}세 소진` : "유지");
+    out.innerHTML = `
+      <h3>① 낙관 · 기준 · 비관 (현재가치 기준)</h3>
+      <div class="table-wrapper"><table class="sim-table"><thead><tr>
+        <th>시나리오</th><th>가정</th><th>월평균 실수령</th><th>75세 월 실수령</th><th>종료 금융자산</th><th>종료 순자산</th><th>자산 소진</th></tr></thead><tbody>
+        ${st.map((r) => `<tr><td><strong>${r.label}</strong></td><td style="text-align:left">${r.note}</td>
+          <td>${fmt(r.avgNet)}</td><td>${fmt(r.age75Net)}</td><td>${r.finalFinancial.toFixed(0)}</td><td>${r.finalNetWorth.toFixed(0)}</td>
+          <td>${dep(r.depletionAge)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <h3>② 한 가지씩 바꿨을 때 (기준 대비 변화)</h3>
+      <div class="table-wrapper"><table class="sim-table"><thead><tr>
+        <th>변경</th><th>월평균 실수령 변화</th><th>종료 순자산 변화</th><th>자산 소진</th></tr></thead><tbody>
+        ${sens.rows.map((r) => `<tr><td style="text-align:left">${r.label}</td>
+          <td class="${cls(r.avgNetDelta)}">${sgn(r.avgNetDelta)}</td><td class="${cls(r.finalNetWorthDelta)}">${sgn(r.finalNetWorthDelta, 0)}</td>
+          <td>${dep(r.depletionAge)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="hint">단위: 백만원(현재가치). 수익률은 계좌형 연금·주식의 자본수익률을 함께 이동합니다. 값이 클수록 그 가정이 결과를 크게 좌우합니다.</p>`;
+  }
+
   function performRenderNow() {
     renderRafId = null;
     latestSimResult = window.SimulatorEngine.runSimulation(currentState);
     renderKpisAndTable(latestSimResult);
     drawCifChart(latestSimResult);
     drawBalanceChart(latestSimResult);
+    renderWarnings(latestSimResult);
+    scheduleStress();
   }
 
   function recalculateAndRender(immediate = false) {
@@ -3398,6 +3459,9 @@
     });
 
     bindChartTooltips();
+
+    const sp = document.getElementById("stressPanel");
+    if (sp) sp.addEventListener("toggle", () => { if (sp.open) renderStress(); });
   }
 
   // 앱 시작

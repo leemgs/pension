@@ -849,3 +849,16 @@ table.sim-table tr:hover td {
 .scn-card .btn { display: inline-block; text-decoration: none; }
 html { scroll-behavior: smooth; }
 .disclaimer a { color: var(--accent-blue); }
+
+/* 위험 신호 / 가정 흔들어 보기 */
+.warnings-box { display: flex; flex-direction: column; gap: 6px; }
+.wn { padding: 9px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; border-left: 4px solid; background: var(--bg-panel); }
+.wn-danger { border-color: var(--accent-rose); background: rgba(244,63,94,.10); }
+.wn-warn { border-color: var(--accent-amber); background: rgba(245,158,11,.10); }
+.wn-info { border-color: var(--accent-blue); background: rgba(56,189,248,.08); }
+.wn-ok { border-color: var(--accent-emerald); background: rgba(16,185,129,.08); }
+.stress-summary { cursor: pointer; font-size: 15px; }
+.stress-body h3 { font-size: 14px; margin: 14px 0 6px; color: var(--accent-blue); }
+.stress-body .pos { color: var(--accent-emerald); }
+.stress-body .neg { color: var(--accent-rose); }
+.hint { color: var(--text-muted); font-size: 12px; font-weight: 400; }
