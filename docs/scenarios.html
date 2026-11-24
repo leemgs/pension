@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>시나리오 | 노후 현금흐름(CIF) 시뮬레이터</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav id="siteNav"></nav>
+  <main class="doc-page">
+    <h1>🗂️ 시나리오</h1>
+    <p class="lead">기본 제공되는 은퇴 플랜입니다. 버튼을 누르면 해당 시나리오가 적용된 시뮬레이터가 바로 열립니다.</p>
+    <div class="scn-card">
+      <h3>1. 표준 균형 은퇴 플랜 (기본)</h3>
+      <p>60세 사적연금·주식배당 개시 → 65세 국민연금 → 70세 주택연금 단계별 파이프라인</p>
+      <a class="btn btn-primary" href="index.html?preset=1">이 시나리오로 열기</a>
+    </div>
+    <div class="scn-card">
+      <h3>2. 배당·연금 조기은퇴 플랜 (56세)</h3>
+      <p>56세 조기은퇴 후 고배당 포트폴리오와 연금저축/IRP를 즉시 개시하는 시나리오</p>
+      <a class="btn btn-primary" href="index.html?preset=2">이 시나리오로 열기</a>
+    </div>
+    <div class="scn-card">
+      <h3>3. 연기연금 + 주택연금 극대화 플랜</h3>
+      <p>국민연금을 68세로 연기(+21.6% 증액)하고 65세부터 주택연금(비과세)을 적극 활용하는 절세 플랜</p>
+      <a class="btn btn-primary" href="index.html?preset=3">이 시나리오로 열기</a>
+    </div>
+    <p>내 상황에 맞춘 조합은 시뮬레이터에서 값을 바꾼 뒤 <a href="index.html#scenario-panel">시나리오 저장</a>으로 보관할 수 있습니다.</p>
+  </main>
+  <footer class="disclaimer">
+    ⚠️ 결과는 입력 가정에 따른 참고용 추정치이며 세무·재무·법률 자문이 아닙니다. 중요한 결정 전에는 공식 자료와 전문가를 통해 확인하세요.
+  </footer>
+  <script src="nav.js"></script>
+</body>
+</html>

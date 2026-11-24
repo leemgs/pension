@@ -13,7 +13,11 @@
 ├── tests/
 │   └── engine.test.js           # 계산 엔진 단위 테스트
 └── docs/
-    ├── index.html               # 웹 UI (진입점)
+    ├── index.html               # 시뮬레이터 (진입점)
+    ├── scenarios.html           # 시나리오 소개 (?preset=1~3 딥링크)
+    ├── guide.html               # 사용 가이드
+    ├── assumptions.html         # 가정·세법 기준
+    ├── nav.js                   # 공통 상단 메뉴
     ├── app.js                   # UI 로직
     ├── engine.js                # 시뮬레이션 계산 엔진
     ├── styles.css               # 스타일
@@ -36,6 +40,20 @@
   python3 server.py
   ```
   Windows에서는 `웹_시뮬레이터_실행.bat`을 더블클릭해도 됩니다.
+
+## 페이지 주소
+
+각 메뉴는 고유한 `.html` 주소로 바로 접속할 수 있습니다.
+
+| 메뉴 | 주소 |
+|------|------|
+| 시뮬레이터 | `docs/index.html` |
+| 시나리오 | `docs/scenarios.html` |
+| 사용 가이드 | `docs/guide.html` |
+| 가정·세법 기준 | `docs/assumptions.html` |
+
+시뮬레이터 안의 영역은 `index.html#kpi-area`, `#cif-chart`, `#detail-table`, `#target-panel`, `#settings-panel`, `#scenario-panel`로,
+시나리오는 `index.html?preset=1`~`3`으로 바로 열 수 있습니다.
 
 ## 프리셋
 

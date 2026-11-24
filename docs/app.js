@@ -3406,6 +3406,20 @@
     rebuildAllControls();
     initEventListeners();
     recalculateAndRender();
+
+    // 딥링크: index.html?preset=2 → 이름이 "2."로 시작하는 프리셋을 자동 적용
+    try {
+      const want = new URLSearchParams(location.search).get("preset");
+      if (want && Array.isArray(savedPresets)) {
+        const hit = savedPresets.find((p) => String(p.name).startsWith(want + "."));
+        if (hit) {
+          currentState = mergeWithDefaultState(deepClone(hit.state));
+          rebuildAllControls();
+          recalculateAndRender();
+          setSaveStatus(`'${hit.name}' 불러옴`);
+        }
+      }
+    } catch (_) {}
   });
 })();
 

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>사용 가이드 | 노후 현금흐름(CIF) 시뮬레이터</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <nav id="siteNav"></nav>
+  <main class="doc-page">
+    <h1>📖 사용 가이드</h1>
+    <p class="lead">처음 사용하는 분을 위한 기본 흐름입니다.</p>
+    <h2>1. 기본 설정 입력</h2>
+    <p><a href="index.html#settings-panel">기본 시간축·물가·세법/건보료 설정</a>에서 현재 나이, 종료 나이, 물가상승률을 정합니다.</p>
+    <h2>2. 자산별 변수 조정</h2>
+    <p><a href="index.html#asset-panel">자산별 상세 변수</a>에서 근로소득, 국민연금, 퇴직연금 DC, IRP, 연금저축, 개인연금, 주식투자, 주택연금을 각각 켜고 끄며 값을 조절합니다. 금액 단위는 <strong>백만원</strong>입니다(예: 1.5 = 150만원).</p>
+    <h2>3. 결과 확인</h2>
+    <ul>
+      <li><a href="index.html#kpi-area">핵심 요약 지표</a>: 월평균 세전·세후 현금흐름, 발생비용, 종료 시점 잔여 재산</li>
+      <li><a href="index.html#cif-chart">월간 현금흐름 그래프</a>: 명목가치/현재가치, 연단위/월단위 전환</li>
+      <li><a href="index.html#detail-table">연령별 상세 표</a>: 세금·건보료 내역과 CSV 저장</li>
+    </ul>
+    <h2>4. 목표 현금흐름 맞추기</h2>
+    <p><a href="index.html#target-panel">목표 CIF 자동조절</a>을 켜면 목표 월 현금흐름에 부족한 금액을 지정한 우선순위의 자산에서 자동으로 인출하고, 최적 조합을 추천받을 수 있습니다.</p>
+    <h2>5. 저장과 백업</h2>
+    <p>현재 상태는 브라우저에 자동 저장됩니다. 상단의 내보내기/불러오기 버튼으로 JSON 파일 백업·이동이 가능합니다.</p>
+    <h2>자주 하는 실수</h2>
+    <ul>
+      <li>금액을 원 단위로 입력 — 모든 입력은 백만원 단위입니다.</li>
+      <li>건보료율 등이 해당 연도와 맞는지 확인하지 않음 — 설정 패널에서 수정할 수 있습니다.</li>
+    </ul>
+  </main>
+  <footer class="disclaimer">
+    ⚠️ 결과는 입력 가정에 따른 참고용 추정치이며 세무·재무·법률 자문이 아닙니다. 중요한 결정 전에는 공식 자료와 전문가를 통해 확인하세요.
+  </footer>
+  <script src="nav.js"></script>
+</body>
+</html>

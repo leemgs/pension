@@ -827,3 +827,25 @@ table.sim-table tr:hover td {
 .assumptions summary { cursor: pointer; color: #cbd5e1; }
 .assumptions ul { margin: 8px 0 0; padding-left: 20px; }
 .assumptions li { margin: 3px 0; }
+
+/* 공통 메뉴 및 정보 페이지 */
+.site-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 20px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 50; }
+.site-nav a { color: var(--text-secondary); text-decoration: none; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.site-nav a:hover { background: var(--bg-card); color: var(--text-primary); }
+.site-nav a.active { background: rgba(56, 189, 248, 0.15); color: var(--accent-blue); }
+.doc-page { max-width: 860px; margin: 0 auto; padding: 24px 20px 48px; line-height: 1.7; }
+.doc-page h1 { font-size: 24px; margin-bottom: 6px; }
+.doc-page .lead { color: var(--text-muted); margin-bottom: 20px; }
+.doc-page h2 { font-size: 17px; margin: 26px 0 8px; color: var(--accent-blue); }
+.doc-page ul, .doc-page ol { padding-left: 22px; }
+.doc-page li { margin: 4px 0; }
+.doc-page a { color: var(--accent-blue); }
+.doc-page table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+.doc-page th, .doc-page td { border: 1px solid var(--border-color); padding: 6px 10px; text-align: left; }
+.doc-page th { background: var(--bg-panel); }
+.scn-card { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin: 12px 0; }
+.scn-card h3 { font-size: 16px; margin-bottom: 4px; }
+.scn-card p { color: var(--text-secondary); margin-bottom: 10px; }
+.scn-card .btn { display: inline-block; text-decoration: none; }
+html { scroll-behavior: smooth; }
+.disclaimer a { color: var(--accent-blue); }
