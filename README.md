@@ -11,10 +11,14 @@
 .
 ├── FI_CIF_Web_Package_.zip      # 배포용 원본 압축 파일
 ├── tests/
-│   └── engine.test.js           # 계산 엔진 단위 테스트
+│   ├── engine.test.js           # 계산 엔진 단위 테스트
+│   └── analysis.test.js         # 경고·스트레스·비교 분석 테스트
 └── docs/
     ├── index.html               # 시뮬레이터 (진입점)
     ├── scenarios.html           # 시나리오 소개 (?preset=1~3 딥링크)
+    ├── compare.html             # 저장 시나리오 나란히 비교
+    ├── analysis.js              # 위험 경고·비교·스트레스·민감도 분석
+    ├── compare.js               # 비교 페이지 로직
     ├── guide.html               # 사용 가이드 (빠른 시작)
     ├── manual.html              # 사용자 매뉴얼 (용어·입력 항목·결과 해석·활용)
     ├── assumptions.html         # 가정·세법 기준
@@ -50,6 +54,7 @@
 |------|------|
 | 시뮬레이터 | `docs/index.html` |
 | 시나리오 | `docs/scenarios.html` |
+| 시나리오 비교 | `docs/compare.html` |
 | 사용 가이드 | `docs/guide.html` |
 | 사용자 매뉴얼 | `docs/manual.html` |
 | 가정·세법 기준 | `docs/assumptions.html` |
@@ -74,5 +79,5 @@
 계산 엔진(`docs/engine.js`)의 세금·공제 함수와 시뮬레이션 불변식을 검증합니다. (Node 18+)
 
 ```bash
-node --test tests/engine.test.js
+node --test tests/
 ```

@@ -3,6 +3,7 @@
   var items = [
     { href: "index.html", label: "📊 시뮬레이터" },
     { href: "scenarios.html", label: "🗂️ 시나리오" },
+    { href: "compare.html", label: "⚖️ 비교" },
     { href: "guide.html", label: "📖 사용 가이드" },
     { href: "manual.html", label: "📘 사용자 매뉴얼" },
     { href: "assumptions.html", label: "📐 가정·세법 기준" },

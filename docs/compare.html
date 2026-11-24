@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>시나리오 비교 | 노후 현금흐름(CIF) 시뮬레이터</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .cmp-wrap { max-width: 1100px; margin: 0 auto; padding: 22px 20px 48px; }
+    .cmp-wrap h1 { font-size: 24px; margin-bottom: 6px; }
+    .picks { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+    .pick { display: flex; gap: 6px; align-items: center; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+    .pick input { accent-color: var(--accent-blue); }
+    .cmp-table td, .cmp-table th { text-align: right; white-space: nowrap; }
+    .cmp-table td:first-child, .cmp-table th:first-child { text-align: left; }
+    .best { color: var(--accent-emerald); font-weight: 800; }
+    .cmp-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+    .cmp-charts .chart-card { padding: 12px; }
+    .cmp-charts h3 { font-size: 14px; margin-bottom: 6px; }
+    .cmp-charts svg { width: 100%; height: auto; display: block; }
+    .cmp-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; margin-top: 6px; }
+    .cmp-legend i { display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: 5px; }
+    @media (max-width: 800px) { .cmp-charts { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <nav id="siteNav"></nav>
+  <main class="cmp-wrap">
+    <h1>⚖️ 시나리오 비교</h1>
+    <p class="hint" style="font-size:13px">저장한 시나리오를 골라 나란히 비교합니다. 모든 금액은 <strong>현재가치(물가할인) 기준, 백만원</strong>이며 초록색이 가장 유리한 값입니다. 시나리오는 <a href="index.html#scenario-panel" style="color:var(--accent-blue)">시뮬레이터</a>에서 저장하세요.</p>
+    <div id="picks" class="picks"></div>
+    <div id="cmpMsg" class="hint"></div>
+    <div id="cmpTableBox" class="table-wrapper"></div>
+    <div class="cmp-charts">
+      <div class="chart-card"><h3>월 실수령액 추이 (현재가치)</h3><div id="chartNet"></div></div>
+      <div class="chart-card"><h3>금융자산 잔액 추이 (현재가치)</h3><div id="chartBal"></div></div>
+    </div>
+    <div id="cmpLegend" class="cmp-legend"></div>
+  </main>
+  <footer class="disclaimer">
+    ⚠️ 결과는 입력 가정에 따른 참고용 추정치이며 세무·재무·법률 자문이 아닙니다.
+  </footer>
+  <script src="data/embedded_state.js" onerror="window.__PORTABLE_STORAGE__ = null;"></script>
+  <script src="nav.js"></script>
+  <script src="engine.js"></script>
+  <script src="analysis.js"></script>
+  <script src="compare.js"></script>
+</body>
+</html>
