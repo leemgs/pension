@@ -45,6 +45,18 @@ test("모든 페이지에 제목·언어·뷰포트 메타와 면책/메뉴가 �
   }
 });
 
+test("모든 페이지가 <head> 안에서 접속 코드 게이트(assets/site.js)를 불러온다", () => {
+  for (const f of pages) {
+    const html = read(f);
+    const head = html.slice(html.indexOf("<head>"), html.indexOf("</head>"));
+    assert.ok(head.includes('src="assets/site.js"'), `${f}: site.js 없음`);
+    // 게이트는 다른 스크립트·스타일보다 먼저 실행되어야 깜빡임 없이 가려집니다.
+    const gate = head.indexOf("assets/site.js");
+    const firstStyle = head.indexOf("<link");
+    assert.ok(firstStyle === -1 || gate < firstStyle, `${f}: site.js가 스타일보다 앞이어야 함`);
+  }
+});
+
 test("개인 식별 정보(작성자 이름)가 사이트에 없다", () => {
   for (const f of fs.readdirSync(DOCS).filter((x) => /\.(html|js|css|json)$/.test(x))) {
     assert.ok(!read(f).includes("\uc720\uc2b9\ud601"), `${f}에 작성자 이름이 있음`);

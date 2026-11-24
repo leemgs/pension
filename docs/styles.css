@@ -993,3 +993,8 @@ html { scroll-behavior: smooth; }
 .case-banner p { margin-top: 3px; color: var(--text-secondary); }
 .case-banner a { color: var(--accent-blue); }
 @media print { .case-banner { display: none !important; } }
+
+/* 접속 코드 잠금 버튼 */
+.site-nav .nav-lock { margin-left: auto; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.site-nav .nav-lock:hover { color: var(--text-primary); background: var(--bg-card); }
+@media print { .nav-lock { display: none !important; } }

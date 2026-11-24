@@ -22,4 +22,14 @@
       return '<a href="' + it.href + '"' + on + ">" + it.label + "</a>";
     })
     .join("");
+  // 접속 코드 게이트가 있을 때만 '잠금' 버튼 표시 (같은 탭에서 허용 상태를 지우고 다시 잠급니다)
+  if (window.SiteAuth && location.protocol !== "file:") {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "nav-lock";
+    b.textContent = "🔒 잠금";
+    b.title = "이 탭의 접근 허용을 해제하고 접속 코드 입력 화면으로 돌아갑니다.";
+    b.addEventListener("click", function () { window.SiteAuth.lock(); });
+    el.appendChild(b);
+  }
 })();
