@@ -184,6 +184,20 @@
         <div id="stressBody" class="stress-body">계산 중…</div>
       </details>
 
+      <!-- 몬테카를로: 수익률 변동 확률 -->
+      <details class="chart-card" id="mcPanel">
+        <summary class="stress-summary"><strong>🎲 자금이 끝까지 유지될 확률 (몬테카를로)</strong> <span class="hint">(눌러서 펼치기)</span></summary>
+        <div class="mc-controls">
+          <label>연 변동성
+            <select id="mcSigma" class="select-input"><option value="10">10% (보수형)</option><option value="15" selected>15% (주식 혼합)</option><option value="20">20% (주식 위주)</option><option value="25">25% (고변동)</option></select></label>
+          <label>시행 횟수
+            <select id="mcN" class="select-input"><option value="300">300회 (빠름)</option><option value="500" selected>500회</option><option value="1000">1,000회 (정밀)</option></select></label>
+          <button id="mcRun" type="button" class="btn btn-primary">▶ 실행</button>
+          <span id="mcStale" class="hint" hidden>⚠️ 입력이 바뀌었습니다. 다시 실행하세요.</span>
+        </div>
+        <div id="mcBody" class="stress-body"><p class="hint">실행을 누르면 수익률을 무작위로 바꿔 여러 번 계산해 확률을 보여 줍니다(500회 약 3초).</p></div>
+      </details>
+
       <!-- 인출 방식 비교 -->
       <details class="chart-card" id="strategyPanel">
         <summary class="stress-summary"><strong>🔀 인출 방식 비교 — 어떻게 꺼내 쓰는 게 유리할까?</strong> <span class="hint">(눌러서 펼치기)</span></summary>

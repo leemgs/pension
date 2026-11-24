@@ -245,5 +245,79 @@
     };
   }
 
-  global.SimulatorAnalysis = { runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
+  // ---- 몬테카를로 ----
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function makeNormal(rng) {
+    return function () {
+      let u = 0, v = 0;
+      while (u === 0) u = rng();
+      v = rng();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+  }
+  function pct(sorted, q) {
+    if (!sorted.length) return 0;
+    const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i);
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+  }
+
+  /**
+   * 연도별 수익률을 무작위로 흔들어 N번 돌립니다(주식형 자산에 연 변동성 sigma 적용, 평균은 입력 수익률 유지).
+   * 성공 = 종료 나이 전에 금융자산이 소진되지 않고, 목표 CIF를 켰다면 미달 연도가 없음.
+   * opts: { n=500, sigma=0.15, seed=20260101, chunk=20, onProgress(done,n) } — 비동기로 UI를 양보하며 실행.
+   */
+  async function runMonteCarlo(E, state, opts) {
+    opts = opts || {};
+    const n = opts.n || 500, sigma = opts.sigma === undefined ? 0.15 : opts.sigma, chunk = opts.chunk || 20;
+    const rng = makeNormal(mulberry32(opts.seed === undefined ? 20260101 : opts.seed));
+    const base0 = clone(state);
+    base0.meta.valueMode = "real";
+    const years = Math.max(1, (base0.meta.endAge || 95) - (base0.meta.currentAge || 52) + 1);
+    const finals = [], depAges = [];
+    let success = 0;
+    let ages = null;
+    const balByYear = [], netByYear = [];
+    for (let i = 0; i < n; i++) {
+      const shocks = [];
+      for (let y = 0; y < years; y++) shocks.push(Math.max(-0.6, sigma * rng()));
+      const st = clone(base0);
+      const sim = E.runSimulation(st, { lite: true, shocks });
+      const rec = sim.yearlyRecords;
+      if (!ages) { ages = rec.map((r) => r.age); rec.forEach(() => { balByYear.push([]); netByYear.push([]); }); }
+      const endAge = rec[rec.length - 1].age;
+      const dep = rec.find((r, k) => k > 0 && r.balances.financialTotal < 0.05 && rec[k - 1].balances.financialTotal >= 0.05);
+      const depleted = !!(dep && dep.age < endAge);
+      const shortfall = sim.summary.targetEnabled && sim.summary.shortfallYears > 0;
+      if (!depleted && !shortfall) success++;
+      if (depleted) depAges.push(dep.age);
+      finals.push(sim.summary.finalFinancialBalance);
+      rec.forEach((r, k) => { balByYear[k].push(r.balances.financialTotal); netByYear[k].push(r.netCif); });
+      if ((i + 1) % chunk === 0 && opts.onProgress) {
+        opts.onProgress(i + 1, n);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+    finals.sort((a, b) => a - b);
+    depAges.sort((a, b) => a - b);
+    const band = (arr) => arr.map((v) => { const s = v.slice().sort((a, b) => a - b); return { p10: pct(s, 0.1), p50: pct(s, 0.5), p90: pct(s, 0.9) }; });
+    return {
+      n, sigma,
+      successRate: success / n,
+      finalFinancial: { p10: pct(finals, 0.1), p50: pct(finals, 0.5), p90: pct(finals, 0.9) },
+      depletionCount: depAges.length,
+      medianDepletionAge: depAges.length ? pct(depAges, 0.5) : null,
+      ages,
+      balanceBand: band(balByYear),
+      netBand: band(netByYear),
+    };
+  }
+
+  global.SimulatorAnalysis = { runMonteCarlo, runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
 })(typeof window !== "undefined" ? window : globalThis);

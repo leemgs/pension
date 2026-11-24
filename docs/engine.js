@@ -1023,6 +1023,8 @@
   }
 function simulateYear(ctx, s, yIdx, fill) {
     const { assets, taxConfig, startAge, baseYear, inflationRate, targetEnabled } = ctx;
+    // 몬테카를로용 연간 수익률 충격(소수, 예: -0.12). 없으면 0
+    const shockZ = (ctx.shocks && ctx.shocks[yIdx]) || 0;
     const age = startAge + yIdx;
     const calendarYear = baseYear + yIdx;
     const ei = assets.earnedIncome;
@@ -1156,7 +1158,8 @@ function simulateYear(ctx, s, yIdx, fill) {
         const st = s.acc[key];
         const auto = targetEnabled && a.cifMode === "auto";
         const sa = num(a.startAge);
-        const totalRet = (num(a.returnRate) + num(a.dividendRate)) / 100.0;
+        const beta = a.growthRatio !== undefined ? num(a.growthRatio, 60) / 100.0 : 0.6; // 주식형 비중
+        const totalRet = (num(a.returnRate) + num(a.dividendRate)) / 100.0 + shockZ * beta;
         const mr = Math.pow(1 + Math.max(-0.99, totalRet), 1 / 12) - 1;
         if (age < num(a.contribEndAge) && (auto || age < sa)) {
           st.bal += num(a.monthlyContrib);
@@ -1193,7 +1196,7 @@ function simulateYear(ctx, s, yIdx, fill) {
         const st = s.stock;
         const auto = targetEnabled && sp.cifMode === "auto";
         const sa = num(sp.startAge);
-        const mPriceRate = Math.pow(1 + num(sp.priceReturnRate) / 100.0, 1 / 12) - 1;
+        const mPriceRate = Math.pow(Math.max(0.05, 1 + num(sp.priceReturnRate) / 100.0 + shockZ), 1 / 12) - 1;
         const mDivRate = num(sp.dividendRate) / 100.0 / 12.0;
         if (age < num(sp.contribEndAge) && (auto || age < sa)) {
           const c = num(sp.monthlyContrib);
@@ -1467,7 +1470,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
   /**
    * 전체 기간 시뮬레이션 실행
    * @param {Object} state 사용자 설정
-   * @param {Object} opts { lite: true 이면 월별 레코드 생략(최적화용) }
+   * @param {Object} opts { lite: true 이면 월별 레코드 생략(최적화용), shocks: 연도별 수익률 충격 배열(몬테카를로용) }
    */
   function runSimulation(state, opts = {}) {
     const lite = Boolean(opts.lite);
@@ -1498,6 +1501,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
       baseYear,
       inflationRate,
       targetEnabled: Boolean(target.enabled),
+      shocks: opts.shocks || null,
     };
 
     const autoOrder = target.enabled

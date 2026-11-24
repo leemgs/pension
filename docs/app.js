@@ -3464,6 +3464,76 @@
       <p class="hint">수령 기간·월 인출액·인출 비율은 각 계좌에 입력한 값을 그대로 씁니다. 방식마다 값이 달라지면 결과가 달라지므로 우열은 입력값에 따라 바뀔 수 있습니다.</p>`;
   }
 
+  // ---- 몬테카를로 (수익률 변동 확률 분석) ----
+  let mcKey = null;
+  let mcRunning = false;
+
+  function mcFanSvg(ages, band, color, unitLabel) {
+    const W = 560, H = 260, L = 50, R = 10, T = 12, B = 26;
+    const ymax = Math.max(1e-9, ...band.map((b) => b.p90)) * 1.08;
+    const x0 = ages[0], x1 = ages[ages.length - 1];
+    const X = (a) => L + ((a - x0) / (x1 - x0 || 1)) * (W - L - R);
+    const Y = (v) => T + (1 - Math.max(0, v) / ymax) * (H - T - B);
+    let g = "";
+    for (let i = 0; i <= 4; i++) {
+      const v = (ymax / 4) * i;
+      g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#334155"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="#94a3b8">${v.toFixed(ymax > 50 ? 0 : 1)}</text>`;
+    }
+    for (let a = Math.ceil(x0 / 5) * 5; a <= x1; a += 5) {
+      g += `<text x="${X(a)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#94a3b8">${a}세</text>`;
+    }
+    const up = ages.map((a, i) => `${X(a).toFixed(1)},${Y(band[i].p90).toFixed(1)}`);
+    const lo = ages.map((a, i) => `${X(a).toFixed(1)},${Y(band[i].p10).toFixed(1)}`).reverse();
+    g += `<polygon points="${up.concat(lo).join(" ")}" fill="${color}" fill-opacity="0.22"/>`;
+    g += `<polyline fill="none" stroke="${color}" stroke-width="2.4" points="${ages.map((a, i) => `${X(a).toFixed(1)},${Y(band[i].p50).toFixed(1)}`).join(" ")}"/>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${unitLabel}">${g}</svg>`;
+  }
+
+  async function runMonteCarloUi() {
+    if (mcRunning) return;
+    const out = document.getElementById("mcBody");
+    const btn = document.getElementById("mcRun");
+    const n = Number(document.getElementById("mcN").value);
+    const sigma = Number(document.getElementById("mcSigma").value) / 100;
+    mcRunning = true;
+    btn.disabled = true;
+    const key = JSON.stringify(currentState);
+    try {
+      const r = await window.SimulatorAnalysis.runMonteCarlo(window.SimulatorEngine, currentState, {
+        n, sigma,
+        onProgress: (d, tot) => { btn.textContent = `계산 중… ${Math.round((d / tot) * 100)}%`; },
+      });
+      mcKey = key;
+      const pctTxt = (r.successRate * 100).toFixed(r.successRate === 1 || r.successRate === 0 ? 0 : 1);
+      const tone = r.successRate >= 0.9 ? "pos" : r.successRate >= 0.7 ? "" : "neg";
+      const f = r.finalFinancial;
+      out.innerHTML = `
+        <div class="mc-head">
+          <div class="mc-big ${tone}">${pctTxt}%</div>
+          <div>종료 나이(${r.ages[r.ages.length - 1]}세)까지 금융자산이 유지될 확률${currentState.target.enabled ? " (목표 CIF 미달 없음 포함)" : ""}
+            <div class="hint">${r.n.toLocaleString()}회 · 연 변동성 ${(r.sigma * 100).toFixed(0)}% · 현재가치 기준${r.depletionCount ? ` · 소진 ${r.depletionCount}회(중앙 ${r.medianDepletionAge}세)` : ""}</div></div>
+        </div>
+        <div class="table-wrapper"><table class="sim-table"><thead><tr><th>종료 시점 금융자산 (백만원)</th><th>하위 10%</th><th>중앙값</th><th>상위 10%</th></tr></thead>
+          <tbody><tr><td style="text-align:left">현재가치</td><td>${f.p10.toFixed(0)}</td><td><strong>${f.p50.toFixed(0)}</strong></td><td>${f.p90.toFixed(0)}</td></tr></tbody></table></div>
+        <div class="mc-charts">
+          <div><h3>금융자산 잔액 (중앙값과 10~90% 범위)</h3>${mcFanSvg(r.ages, r.balanceBand, "#10b981", "금융자산 잔액")}</div>
+          <div><h3>월 실수령액 (중앙값과 10~90% 범위)</h3>${mcFanSvg(r.ages, r.netBand, "#38bdf8", "월 실수령액")}</div>
+        </div>
+        <p class="hint">주식형 자산(주식, 계좌형 연금의 성장형 비중)의 연 수익률에 정규분포 무작위 충격을 더했습니다. 평균 수익률은 입력값이고, 개인연금·국민연금·주택은 변동하지 않습니다. 변동성이 클수록 중앙값이 기준 결과보다 낮아지는데(변동성 손실), 이는 정상입니다. 같은 입력은 항상 같은 결과가 나옵니다(고정 시드).</p>`;
+    } catch (e) {
+      out.innerHTML = '<p class="hint">계산 중 오류가 발생했습니다: ' + esc(e.message) + "</p>";
+    } finally {
+      mcRunning = false;
+      btn.disabled = false;
+      btn.textContent = "▶ 다시 실행";
+    }
+  }
+
+  function markMcStale() {
+    const note = document.getElementById("mcStale");
+    if (note) note.hidden = !(mcKey && mcKey !== JSON.stringify(currentState));
+  }
+
   function performRenderNow() {
     renderRafId = null;
     latestSimResult = window.SimulatorEngine.runSimulation(currentState);
@@ -3474,6 +3544,7 @@
     scheduleStress();
     renderPrintSummary();
     scheduleStrategies();
+    markMcStale();
   }
 
   function recalculateAndRender(immediate = false) {
@@ -3656,6 +3727,8 @@
       if (spp && !spp.open) { spp.open = true; renderStress(); }
     });
 
+    const mcb = document.getElementById("mcRun");
+    if (mcb) mcb.addEventListener("click", runMonteCarloUi);
     const stp = document.getElementById("strategyPanel");
     if (stp) stp.addEventListener("toggle", () => { if (stp.open) renderStrategies(); });
 

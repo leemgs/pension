@@ -90,3 +90,31 @@ test("인출 방식 비교: 목표 CIF 자동조절이 켜져 있으면 비교 �
   assert.strictEqual(A.runWithdrawalStrategies(E, st).applicable, false);
 });
 function near0(a, b) { assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`); }
+
+test("몬테카를로: 변동성 0이면 결정적, 변동성이 크면 분위가 벌어짐, 시드 재현", async () => {
+  const st = E.createDefaultState();
+  const base = A.summarizeScenario(E, st);
+  const z = await A.runMonteCarlo(E, st, { n: 20, sigma: 0 });
+  assert.ok(Math.abs(z.finalFinancial.p10 - base.finalFinancial) < 1e-6 && Math.abs(z.finalFinancial.p90 - base.finalFinancial) < 1e-6);
+  assert.strictEqual(z.successRate, base.depletionAge ? 0 : 1);
+
+  const a = await A.runMonteCarlo(E, st, { n: 60, sigma: 0.2, seed: 7 });
+  const b = await A.runMonteCarlo(E, st, { n: 60, sigma: 0.2, seed: 7 });
+  assert.deepStrictEqual(a.finalFinancial, b.finalFinancial, "같은 시드는 같은 결과");
+  assert.ok(a.finalFinancial.p10 < a.finalFinancial.p50 && a.finalFinancial.p50 < a.finalFinancial.p90);
+  assert.strictEqual(a.balanceBand.length, a.ages.length);
+  assert.ok(a.successRate >= 0 && a.successRate <= 1);
+});
+
+test("몬테카를로: 자산을 줄이면 성공 확률이 떨어진다", async () => {
+  const st = E.createDefaultState();
+  const lean = clone(st);
+  lean.target.enabled = false;
+  ["dcPension", "irp", "pensionSavings", "stockPortfolio"].forEach((k) => { lean.assets[k].currentBalance *= 0.2; });
+  lean.assets.stockPortfolio.sellMode = lean.assets.stockPortfolio.sellMode;
+  lean.assets.privatePension.enabled = true;
+  const rich = await A.runMonteCarlo(E, st, { n: 80, sigma: 0.15 });
+  const poor = await A.runMonteCarlo(E, lean, { n: 80, sigma: 0.15 });
+  assert.ok(poor.finalFinancial.p50 < rich.finalFinancial.p50);
+  assert.ok(poor.successRate <= rich.successRate);
+});
