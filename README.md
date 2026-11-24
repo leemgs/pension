@@ -11,27 +11,23 @@
 .
 ├── FI_CIF_Web_Package_.zip      # 배포용 원본 압축 파일
 └── docs/
-    └── FI_CIF_Web_Simulator/
-        ├── index.html           # 웹 UI (진입점)
-        ├── app.js               # UI 로직
-        ├── engine.js            # 시뮬레이션 계산 엔진
-        ├── styles.css           # 스타일
-        ├── server.py            # 로컬 자동저장 서버 (선택)
-        ├── data/
-        │   ├── last_state.json  # 마지막 설정
-        │   ├── embedded_state.js
-        │   └── presets/         # 기본 프리셋 3종
-        ├── 웹_시뮬레이터_실행.bat
-        └── 실행방법_안내.txt
+    ├── index.html               # 웹 UI (진입점)
+    ├── app.js                   # UI 로직
+    ├── engine.js                # 시뮬레이션 계산 엔진
+    ├── styles.css               # 스타일
+    ├── server.py                # 로컬 자동저장 서버 (선택)
+    ├── data/                    # 마지막 설정 및 프리셋 3종
+    ├── 웹_시뮬레이터_실행.bat
+    └── 실행방법_안내.txt
 ```
 
 ## 실행 방법
 
-- **간단 실행:** `docs/FI_CIF_Web_Simulator/index.html`을 크롬/엣지 등 브라우저에서 엽니다.
+- **간단 실행:** `docs/index.html`을 크롬/엣지 등 브라우저에서 엽니다.
   Python 없이 단독으로 동작하며, 브라우저 자동저장을 사용합니다.
 - **로컬 서버 실행(Python):**
   ```bash
-  cd docs/FI_CIF_Web_Simulator
+  cd docs
   python3 server.py
   ```
   Windows에서는 `웹_시뮬레이터_실행.bat`을 더블클릭해도 됩니다.
