@@ -319,5 +319,77 @@
     };
   }
 
-  global.SimulatorAnalysis = { runMonteCarlo, runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
+  // ---- 목표 역산 ----
+  /** 목표 CIF를 켜고 금융자산을 '자동조절'로 돌려 목표를 지킬 수 있는지 시험할 상태를 만듭니다. */
+  function prepReverse(E, state, targetMonthly, assetScale) {
+    const st = clone(state);
+    st.meta.valueMode = "nominal"; // 목표 달성 판정은 엔진 내부 기준(명목)에서 하고, 금액 표시는 목표 기준(현재가치/명목)을 따름
+    st.target.enabled = true;
+    if (targetMonthly !== undefined) st.target.netMonthly = targetMonthly;
+    st.target.priorityOrder = E.normalizeOrder(st.target.priorityOrder);
+    const keys = E.AUTO_CAPABLE.filter((k) => st.assets[k] && st.assets[k].enabled);
+    keys.forEach((k) => {
+      st.assets[k].cifMode = "auto";
+      if (assetScale !== undefined && st.assets[k].currentBalance !== undefined) st.assets[k].currentBalance *= assetScale;
+    });
+    return { st, keys };
+  }
+
+  function feasible(E, state, targetMonthly, assetScale) {
+    const { st } = prepReverse(E, state, targetMonthly, assetScale);
+    const sm = E.runSimulation(st, { lite: true }).summary;
+    return sm.shortfallYears === 0;
+  }
+
+  /**
+   * 목표 역산: ① 지금 자산으로 지속 가능한 최대 월 현금흐름, ② 입력한 목표를 지키는 데 필요한 금융자산.
+   * 목표 기준(세후/세전, 현재가치/명목)·시작 나이·우선순위는 state.target을 따릅니다.
+   * 목표 달성 = 목표 시작 나이부터 종료 나이까지 매년 목표 현금흐름을 채움(미달 연도 0).
+   */
+  async function solveReverse(E, state, targetMonthly, onProgress) {
+    const tick = async (p) => { if (onProgress) onProgress(p); await new Promise((r) => setTimeout(r, 0)); };
+    const tgt = targetMonthly === undefined ? state.target.netMonthly : targetMonthly;
+    const { keys } = prepReverse(E, state, tgt);
+    if (!keys.length) return { ok: false, reason: "자동조절에 쓸 금융자산(DC·IRP·연금저축·개인연금·주식)이 켜져 있지 않습니다." };
+
+    // ① 최대 지속 가능 월 현금흐름
+    let lo = 0, hi = Math.max(5, tgt * 2, 10);
+    while (feasible(E, state, hi) && hi < 400) { lo = hi; hi *= 2; }
+    let maxSustainable;
+    if (feasible(E, state, hi)) maxSustainable = hi; // 탐색 상한 초과
+    else {
+      for (let i = 0; i < 13; i++) {
+        const mid = (lo + hi) / 2;
+        if (feasible(E, state, mid)) lo = mid; else hi = mid;
+        if (i % 3 === 2) await tick(0.05 + (i / 13) * 0.45);
+      }
+      maxSustainable = lo;
+    }
+
+    await tick(0.5);
+    // ② 필요한 금융자산 배율
+    const scaled = keys.filter((k) => state.assets[k].currentBalance !== undefined);
+    const currentFinancial = scaled.reduce((a, k) => a + (state.assets[k].currentBalance || 0), 0);
+    let requiredScale = null, note = "";
+    if (feasible(E, state, tgt, 0)) { requiredScale = 0; note = "국민연금·근로소득 등 다른 소득만으로 목표가 충족됩니다."; }
+    else if (!currentFinancial) { note = "스케일할 금융자산 평가액이 없습니다."; }
+    else {
+      let a = 0, b = 1, found = feasible(E, state, tgt, b);
+      while (!found && b < 64) { a = b; b *= 2; found = feasible(E, state, tgt, b); }
+      if (found) {
+        for (let i = 0; i < 12; i++) { const m = (a + b) / 2; if (feasible(E, state, tgt, m)) b = m; else a = m; if (i % 3 === 2) await tick(0.5 + (i / 12) * 0.5); }
+        requiredScale = b;
+      } else note = "금융자산을 64배로 늘려도 목표를 채우지 못합니다(목표 시작 나이 전 소득 공백 등).";
+    }
+    return {
+      ok: true, target: tgt, startAge: state.target.startAge, endAge: state.meta.endAge,
+      measure: state.target.measure, basis: state.target.basis,
+      maxSustainable, currentFinancial, requiredScale,
+      requiredFinancial: requiredScale === null ? null : requiredScale * currentFinancial,
+      gap: requiredScale === null ? null : requiredScale * currentFinancial - currentFinancial,
+      accounts: keys, note,
+    };
+  }
+
+  global.SimulatorAnalysis = { solveReverse, runMonteCarlo, runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
 })(typeof window !== "undefined" ? window : globalThis);

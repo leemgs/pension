@@ -184,6 +184,17 @@
         <div id="stressBody" class="stress-body">계산 중…</div>
       </details>
 
+      <!-- 목표 역산 -->
+      <details class="chart-card" id="reversePanel">
+        <summary class="stress-summary"><strong>🎯 목표 역산 — 얼마까지 쓸 수 있고, 얼마가 필요할까?</strong> <span class="hint">(눌러서 펼치기)</span></summary>
+        <div class="mc-controls">
+          <label>목표 월 현금흐름 (백만원)
+            <input id="reverseTarget" type="number" class="num-input" min="0" step="0.1" value="5" style="width:120px" /></label>
+          <button id="reverseRun" type="button" class="btn btn-primary">▶ 계산</button>
+        </div>
+        <div id="reverseBody" class="stress-body"><p class="hint">목표 월 금액을 넣고 계산을 누르면 ① 지금 자산으로 유지 가능한 최대 월 현금흐름과 ② 목표를 지키는 데 필요한 금융자산을 구합니다. 목표 기준(세후/세전, 현재가치/명목)과 시작 나이는 위 '목표 CIF' 패널의 설정을 따릅니다. (약 2~5초)</p></div>
+      </details>
+
       <!-- 몬테카를로: 수익률 변동 확률 -->
       <details class="chart-card" id="mcPanel">
         <summary class="stress-summary"><strong>🎲 자금이 끝까지 유지될 확률 (몬테카를로)</strong> <span class="hint">(눌러서 펼치기)</span></summary>

@@ -3464,6 +3464,63 @@
       <p class="hint">수령 기간·월 인출액·인출 비율은 각 계좌에 입력한 값을 그대로 씁니다. 방식마다 값이 달라지면 결과가 달라지므로 우열은 입력값에 따라 바뀔 수 있습니다.</p>`;
   }
 
+  // ---- 목표 역산 ----
+  let reverseRunning = false;
+  async function runReverseUi() {
+    if (reverseRunning) return;
+    const out = document.getElementById("reverseBody");
+    const btn = document.getElementById("reverseRun");
+    const inp = document.getElementById("reverseTarget");
+    const tgt = Math.max(0, Number(inp.value) || 0);
+    reverseRunning = true;
+    btn.disabled = true;
+    try {
+      const r = await window.SimulatorAnalysis.solveReverse(window.SimulatorEngine, currentState, tgt, (p) => {
+        btn.textContent = `계산 중… ${Math.round(p * 100)}%`;
+      });
+      if (!r.ok) { out.innerHTML = `<p class="hint">${esc(r.reason)}</p>`; return; }
+      const basisTxt = `${r.measure === "net" ? "세후 실수령" : "세전 총액"} · ${r.basis === "real" ? "현재가치(매년 물가만큼 증액)" : "명목 고정액"}`;
+      const m = r.maxSustainable;
+      const diff = m - r.target;
+      const reqTxt = r.requiredScale === null
+        ? `<div class="rv-sub neg">${esc(r.note)}</div>`
+        : r.requiredScale === 0
+          ? `<div class="rv-big pos">추가 자산 불필요</div><div class="rv-sub">${esc(r.note)}</div>`
+          : `<div class="rv-big ${r.gap > 0 ? "neg" : "pos"}">${r.requiredFinancial.toFixed(0)}<span> 백만원</span></div>
+             <div class="rv-sub">현재 금융자산 ${r.currentFinancial.toFixed(0)}백만원의 <strong>${r.requiredScale.toFixed(2)}배</strong> ·
+             ${r.gap > 0 ? `<strong class="neg">${r.gap.toFixed(0)}백만원 부족</strong>` : `<strong class="pos">${(-r.gap).toFixed(0)}백만원 여유</strong>`}</div>`;
+      out.innerHTML = `
+        <div class="rv-grid">
+          <div class="rv-card">
+            <div class="rv-label">① 지금 자산으로 지속 가능한 최대 월 현금흐름</div>
+            <div class="rv-big ${diff >= 0 ? "pos" : "neg"}">${m >= 400 ? "400+" : m.toFixed(2)}<span> 백만원/월</span></div>
+            <div class="rv-sub">목표 ${r.target}백만원 대비 <strong class="${diff >= 0 ? "pos" : "neg"}">${diff >= 0 ? "+" : ""}${diff.toFixed(2)}</strong> (약 ${Math.round(m * 100)}만원)</div>
+          </div>
+          <div class="rv-card">
+            <div class="rv-label">② 목표 ${r.target}백만원을 지키는 데 필요한 금융자산</div>
+            ${reqTxt}
+          </div>
+        </div>
+        <p class="hint">기준: ${basisTxt} · ${r.startAge}세부터 ${r.endAge}세까지 매년 목표를 채우는 조건(미달 연도 0). 부족분은 ${r.accounts.length}개 금융자산에서 우선순위대로 인출한다고 가정합니다.
+          ②는 금융자산 평가액(퇴직연금 DC·IRP·연금저축·주식)을 같은 비율로 키우거나 줄여 찾은 값이며, 국민연금·주택연금·개인연금 월 수령액은 그대로입니다.</p>
+        <button type="button" id="reverseApply" class="btn">이 목표를 '목표 CIF 자동조절'에 적용</button>`;
+      document.getElementById("reverseApply").addEventListener("click", () => {
+        currentState.target.netMonthly = r.target;
+        currentState.target.enabled = true;
+        rebuildAllControls();
+        recalculateAndRender();
+        scheduleAutoSave();
+        setSaveStatus(`목표 CIF ${r.target}백만원 적용됨`);
+      });
+    } catch (e) {
+      out.innerHTML = '<p class="hint">계산 중 오류가 발생했습니다: ' + esc(e.message) + "</p>";
+    } finally {
+      reverseRunning = false;
+      btn.disabled = false;
+      btn.textContent = "▶ 계산";
+    }
+  }
+
   // ---- 몬테카를로 (수익률 변동 확률 분석) ----
   let mcKey = null;
   let mcRunning = false;
@@ -3727,6 +3784,15 @@
       if (spp && !spp.open) { spp.open = true; renderStress(); }
     });
 
+    const rvb = document.getElementById("reverseRun");
+    if (rvb) rvb.addEventListener("click", runReverseUi);
+    const rvp = document.getElementById("reversePanel");
+    if (rvp) rvp.addEventListener("toggle", () => {
+      const ri = document.getElementById("reverseTarget");
+      if (rvp.open && ri && !ri.dataset.touched) ri.value = currentState.target.netMonthly;
+    });
+    const rvi = document.getElementById("reverseTarget");
+    if (rvi) rvi.addEventListener("input", () => { rvi.dataset.touched = "1"; });
     const mcb = document.getElementById("mcRun");
     if (mcb) mcb.addEventListener("click", runMonteCarloUi);
     const stp = document.getElementById("strategyPanel");

@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const sb = { console };
+const sb = { console, setTimeout };
 sb.globalThis = sb;
 vm.createContext(sb);
 for (const f of ["taxrates", "engine", "analysis"]) {
@@ -117,4 +117,38 @@ test("몬테카를로: 자산을 줄이면 성공 확률이 떨어진다", async
   const poor = await A.runMonteCarlo(E, lean, { n: 80, sigma: 0.15 });
   assert.ok(poor.finalFinancial.p50 < rich.finalFinancial.p50);
   assert.ok(poor.successRate <= rich.successRate);
+});
+
+test("목표 역산: 최대 지속 가능 금액과 필요 자산이 서로 일관됨", async () => {
+  const st = E.createDefaultState();
+  const before = JSON.stringify(st);
+  const r = await A.solveReverse(E, st, 5);
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(JSON.stringify(st), before, "원본 불변");
+  // 최대 지속 가능 금액 바로 아래는 가능, 위는 불가능 (엔진으로 직접 확인)
+  const feasibleAt = (v, k = 1) => {
+    const c = clone(st); c.meta.valueMode = "nominal"; c.target.enabled = true; c.target.netMonthly = v;
+    ["dcPension", "irp", "pensionSavings", "stockPortfolio", "privatePension"].forEach((x) => { c.assets[x].cifMode = "auto"; if (c.assets[x].currentBalance !== undefined) c.assets[x].currentBalance *= k; });
+    return E.runSimulation(c, { lite: true }).summary.shortfallYears === 0;
+  };
+  assert.ok(feasibleAt(r.maxSustainable * 0.99), "최대값의 99%는 가능");
+  assert.ok(!feasibleAt(r.maxSustainable * 1.03 + 0.02), "최대값을 넘으면 불가능");
+  // 목표 5가 최대값보다 크면 자산을 더 늘려야 하고, 필요 자산으로 실제 목표 달성
+  if (r.maxSustainable < 5) assert.ok(r.requiredScale > 1);
+  assert.ok(feasibleAt(5, r.requiredScale * 1.02 + 1e-6), "필요 자산(+2%)으로 목표 달성");
+  assert.ok(!feasibleAt(5, r.requiredScale * 0.9 - 0.01) || r.requiredScale === 0, "필요 자산보다 10% 적으면 불가");
+});
+
+test("목표 역산: 목표가 낮을수록 필요 자산이 적다", async () => {
+  const st = E.createDefaultState();
+  const low = await A.solveReverse(E, st, 3), high = await A.solveReverse(E, st, 8);
+  assert.ok(low.requiredFinancial < high.requiredFinancial);
+  assert.ok(Math.abs(low.maxSustainable - high.maxSustainable) < 0.02, "최대 지속 금액은 목표와 무관");
+});
+
+test("목표 역산: 금융자산이 없으면 안내", async () => {
+  const st = E.createDefaultState();
+  ["dcPension", "irp", "pensionSavings", "stockPortfolio", "privatePension"].forEach((k) => { st.assets[k].enabled = false; });
+  const r = await A.solveReverse(E, st, 5);
+  assert.strictEqual(r.ok, false);
 });
