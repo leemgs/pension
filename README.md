@@ -1,0 +1,49 @@
+# pension
+
+노후 현금흐름(CIF) & 세금·건보료 정밀 시뮬레이터 (FI · CIF Simulator) 저장소입니다.
+
+근로소득, 국민연금, 퇴직연금 DC, IRP, 연금저축, 개인연금, 주식투자, 주택연금과
+현행 세법·지역건보료를 통합 반영하여 은퇴 후 현금흐름을 시뮬레이션합니다.
+
+## 구조
+
+```
+.
+├── FI_CIF_Web_Package_.zip      # 배포용 원본 압축 파일
+└── docs/
+    └── FI_CIF_Web_Simulator/
+        ├── index.html           # 웹 UI (진입점)
+        ├── app.js               # UI 로직
+        ├── engine.js            # 시뮬레이션 계산 엔진
+        ├── styles.css           # 스타일
+        ├── server.py            # 로컬 자동저장 서버 (선택)
+        ├── data/
+        │   ├── last_state.json  # 마지막 설정
+        │   ├── embedded_state.js
+        │   └── presets/         # 기본 프리셋 3종
+        ├── 웹_시뮬레이터_실행.bat
+        └── 실행방법_안내.txt
+```
+
+## 실행 방법
+
+- **간단 실행:** `docs/FI_CIF_Web_Simulator/index.html`을 크롬/엣지 등 브라우저에서 엽니다.
+  Python 없이 단독으로 동작하며, 브라우저 자동저장을 사용합니다.
+- **로컬 서버 실행(Python):**
+  ```bash
+  cd docs/FI_CIF_Web_Simulator
+  python3 server.py
+  ```
+  Windows에서는 `웹_시뮬레이터_실행.bat`을 더블클릭해도 됩니다.
+
+## 프리셋
+
+| # | 프리셋 |
+|---|--------|
+| 1 | 표준 균형 은퇴 플랜 (기본) |
+| 2 | 배당·연금 조기은퇴 플랜 (56세) |
+| 3 | 연기연금 + 주택연금 극대화 플랜 |
+
+## 상태 저장/복원
+
+상단의 **상태 파일 내보내기/불러오기(.json)** 버튼으로 현재 설정과 프리셋을 백업·복원할 수 있습니다.
