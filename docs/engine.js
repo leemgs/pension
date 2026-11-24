@@ -306,7 +306,7 @@
     if (annualGross <= 15.0) return 3.5 + (annualGross - 5.0) * 0.4;
     if (annualGross <= 45.0) return 7.5 + (annualGross - 15.0) * 0.15;
     if (annualGross <= 100.0) return 12.0 + (annualGross - 45.0) * 0.05;
-    return 14.75 + (annualGross - 100.0) * 0.02;
+    return Math.min(20.0, 14.75 + (annualGross - 100.0) * 0.02); // 법정 한도 2,000만원
   }
 
   /**

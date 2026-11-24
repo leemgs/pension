@@ -38,6 +38,7 @@ test("근로소득공제 구간 경계 연속", () => {
   near(I.calcEarnedIncomeDeduction(15), 7.5);
   near(I.calcEarnedIncomeDeduction(45), 12.0);
   near(I.calcEarnedIncomeDeduction(100), 14.75);
+  near(I.calcEarnedIncomeDeduction(1000), 20.0); // 법정 한도 2,000만원
 });
 
 test("건보 재산 점수·재산세: 0 이하 입력, 단조 증가", () => {

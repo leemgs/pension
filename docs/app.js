@@ -108,6 +108,7 @@
 
     // 1) 로컬 Python 서버 API 시도
     try {
+      if (location.protocol === "file:") throw new Error("file protocol: no server");
       const res = await fetch("/api/bootstrap", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
@@ -2386,7 +2387,7 @@
 
     const padLeft = 64;
     const padRight = 24;
-    const padTop = 22;
+    const padTop = 34;
     const padBottom = 42;
     const plotW = Math.max(50, width - padLeft - padRight);
     const plotH = Math.max(50, height - padTop - padBottom);
@@ -3281,6 +3282,24 @@
     });
 
     // 상태 파일(.json) 내보내기
+    const btnCsv = document.getElementById("btnExportCsv");
+    if (btnCsv) {
+      btnCsv.addEventListener("click", () => {
+        const table = document.querySelector(".sim-table");
+        if (!table) return;
+        const esc = (t) => '"' + t.replace(/\s+/g, " ").trim().replace(/"/g, '""') + '"';
+        const rows = [...table.querySelectorAll("tr")].map((tr) =>
+          [...tr.children].map((c) => esc(c.textContent)).join(",")
+        );
+        const blob = new Blob(["\ufeff" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "cif_yearly_table.csv";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      });
+    }
+
     document.getElementById("btnExportJson").addEventListener("click", () => {
       const exportPayload = {
         exportedAt: new Date().toISOString(),
