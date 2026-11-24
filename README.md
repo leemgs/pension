@@ -10,10 +10,12 @@
 ```
 .
 ├── FI_CIF_Web_Package_.zip      # 배포용 원본 압축 파일
+├── .github/workflows/test.yml   # 푸시·PR마다 테스트 실행(GitHub Actions)
 ├── tests/
 │   ├── engine.test.js           # 계산 엔진 단위 테스트
 │   ├── analysis.test.js         # 경고·스트레스·비교·인출방식·몬테카를로 테스트
-│   └── verification.test.js     # 세금·건보료 손계산/공표값 검증
+│   ├── verification.test.js     # 세금·건보료 손계산/공표값 검증
+│   └── site.test.js             # 내부 링크·앵커·메타 무결성
 └── docs/
     ├── index.html               # 시뮬레이터 (진입점)
     ├── scenarios.html           # 시나리오 소개 (?preset=1~3 딥링크)
@@ -93,3 +95,5 @@
 ```bash
 node --test
 ```
+
+GitHub Actions(`.github/workflows/test.yml`)가 `main` 푸시와 모든 PR에서 같은 테스트를 자동 실행합니다.

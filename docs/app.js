@@ -3339,8 +3339,11 @@
   function renderWarnings(sim) {
     const box = document.getElementById("warningsBox");
     if (!box || !window.SimulatorAnalysis) return;
-    const items = window.SimulatorAnalysis.analyzeInputs(currentState).map((w) => ({ level: w.level, text: "입력 점검: " + w.text }))
-      .concat(window.SimulatorAnalysis.analyzeWarnings(sim, currentState));
+    const A = window.SimulatorAnalysis;
+    let thresholds = [];
+    try { thresholds = A.analyzeThresholds(window.SimulatorEngine, currentState).map((w) => ({ level: w.level, text: "세금 기준선: " + w.text })); } catch (_) {}
+    const items = A.analyzeInputs(currentState).map((w) => ({ level: w.level, text: "입력 점검: " + w.text }))
+      .concat(A.analyzeWarnings(sim, currentState), thresholds);
     if (!items.length) {
       box.innerHTML = '<div class="wn wn-ok">✅ 소득 공백·자산 소진·목표 미달 등 주요 위험 신호가 발견되지 않았습니다.</div>';
       return;

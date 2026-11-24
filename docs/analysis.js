@@ -392,5 +392,50 @@
     };
   }
 
-  global.SimulatorAnalysis = { solveReverse, runMonteCarlo, runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
+  // ---- 세금 기준선 점검 (금융소득 2,000만원 · 배당 1,000만원 · 사적연금 1,500만원) ----
+  /** 연령별 값 배열에서 기준선을 넘는/근접한 구간을 찾아 문장 조각으로 만듭니다. */
+  function lineHits(rec, valueOf, limit, nearRatio) {
+    const over = rec.filter((r) => valueOf(r) > limit + 1e-9);
+    const near = nearRatio ? rec.filter((r) => valueOf(r) > limit * nearRatio && valueOf(r) <= limit + 1e-9) : [];
+    const peak = (arr) => Math.max(0, ...arr.map(valueOf));
+    return { over, near, overPeak: peak(over), nearPeak: peak(near) };
+  }
+  const manwon = (v) => Math.round(v * 100).toLocaleString("ko-KR") + "만원";
+
+  /**
+   * 법정 기준선을 넘거나 근접하는 해를 찾습니다. 기준선은 물가에 연동되지 않는 명목 금액이므로 명목 기준으로 계산합니다.
+   * - 배당소득(금융소득) 연 2,000만원: 초과 시 종합과세 대상
+   * - 배당소득 연 1,000만원: 초과 시 지역건보료 소득에 전액 반영
+   * - 사적연금 과세 대상 수령액 연 1,500만원: 초과 시 저율 분리과세 불가(종합과세 또는 16.5% 분리과세)
+   */
+  function analyzeThresholds(E, state) {
+    const st = clone(state);
+    st.meta.valueMode = "nominal";
+    const rec = E.runSimulation(st).yearlyRecords;
+    const out = [];
+    const div = (r) => r.stockDiv * 12;
+    const pen = (r) => r.privateTaxableAnnual || 0;
+
+    const f2 = lineHits(rec, div, 20, 0.9);
+    if (f2.over.length) {
+      out.push({ level: "warn", text: `배당소득이 연 2,000만원을 넘는 해: ${fmtAges(f2.over.map((r) => r.age))}(최대 약 ${manwon(f2.overPeak)}). 금융소득 종합과세 대상이 되면 세율이 높아지고, ISA 등 세제혜택 상품 신규 가입이 3년간 제한되며 건강보험 피부양자 자격을 잃을 수 있습니다. 배당 규모나 개시 시점을 조절하거나 ISA·연금계좌로 나누는 방법을 검토하세요(기준은 명목 금액).` });
+    } else if (f2.near.length) {
+      out.push({ level: "info", text: `배당소득이 연 2,000만원 기준선에 근접합니다: ${fmtAges(f2.near.map((r) => r.age))}(최대 약 ${manwon(f2.nearPeak)}). 조금만 늘어도 종합과세 대상이 될 수 있습니다.` });
+    }
+    const f1 = lineHits(rec, div, 10, 0);
+    const f1only = f1.over.filter((r) => div(r) <= 20 + 1e-9);
+    if (f1only.length) {
+      out.push({ level: "info", text: `배당소득이 연 1,000만원을 넘는 해: ${fmtAges(f1only.map((r) => r.age))}. 지역가입자라면 이 경우 배당 전액이 건강보험료 소득에 반영됩니다.` });
+    }
+    const p15 = lineHits(rec, pen, 15, 0.9);
+    if (p15.over.length) {
+      const rules = Array.from(new Set(p15.over.map((r) => r.chosenTaxRule).filter(Boolean)));
+      out.push({ level: "warn", text: `사적연금 과세 대상 수령액이 연 1,500만원을 넘는 해: ${fmtAges(p15.over.map((r) => r.age))}(최대 약 ${manwon(p15.overPeak)}). 저율(3.3~5.5%) 분리과세 한도를 넘으면 종합과세 또는 16.5% 분리과세 중 하나를 택해야 합니다${rules.length ? ` (시뮬레이션 선택: ${rules.join(" / ")})` : ""}. 수령 기간을 늘리거나 세액공제를 받지 않은 원금부터 인출하는 방법을 검토하세요.` });
+    } else if (p15.near.length) {
+      out.push({ level: "info", text: `사적연금 과세 대상 수령액이 연 1,500만원 기준선에 근접합니다: ${fmtAges(p15.near.map((r) => r.age))}(최대 약 ${manwon(p15.nearPeak)}). 넘으면 저율 분리과세가 적용되지 않습니다.` });
+    }
+    return out;
+  }
+
+  global.SimulatorAnalysis = { analyzeThresholds, solveReverse, runMonteCarlo, runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
 })(typeof window !== "undefined" ? window : globalThis);

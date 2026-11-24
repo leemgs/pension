@@ -167,3 +167,29 @@ test("가이드 사례: 55세/65세 수령 총 세금이 가이드 숫자(1,045�
   }
   assert.ok(C.get("pension-65").expectTotalTax < C.get("pension-55").expectTotalTax);
 });
+
+test("세금 기준선: 배당 2,000만원 초과·근접, 사적연금 1,500만원 초과·근접", () => {
+  const base = E.createDefaultState();
+  // 배당이 매우 높음 → 2,000만원 초과 경고
+  const hi = clone(base); hi.assets.stockPortfolio.currentBalance = 700;
+  const w1 = A.analyzeThresholds(E, hi);
+  assert.ok(w1.some((x) => x.level === "warn" && x.text.includes("연 2,000만원을 넘는 해")));
+  // 주식 없음 → 배당 관련 경고 없음
+  const none = clone(base); none.assets.stockPortfolio.enabled = false;
+  assert.ok(!A.analyzeThresholds(E, none).some((x) => x.text.includes("배당소득")));
+
+  // 퇴직연금 DC 10년 수령: 1.65억 → 연 1,650만원(초과), 1.45억 → 연 1,450만원(근접)
+  const mk = (bal) => {
+    const c = sb.SimulatorCases.get("pension-55").build(E);
+    c.assets.pensionSavings.enabled = false;
+    Object.assign(c.assets.dcPension, { enabled: true, currentBalance: bal, growthReturnRate: 0, dividendReturnRate: 0, returnRate: 0, dividendRate: 0, withdrawalMode: "period", payoutYears: 10, severancePrincipalRatio: 0 });
+    return c;
+  };
+  const over = A.analyzeThresholds(E, mk(165));
+  assert.ok(over.some((x) => x.level === "warn" && x.text.includes("연 1,500만원을 넘는 해") && x.text.includes("1,650만원")));
+  const near = A.analyzeThresholds(E, mk(145));
+  assert.ok(near.some((x) => x.level === "info" && x.text.includes("1,500만원 기준선에 근접")));
+  assert.ok(!near.some((x) => x.level === "warn"));
+  // 원본 불변
+  const before = JSON.stringify(hi); A.analyzeThresholds(E, hi); assert.strictEqual(JSON.stringify(hi), before);
+});

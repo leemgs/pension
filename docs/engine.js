@@ -1707,6 +1707,7 @@ function solveYearForTarget(ctx, s0, yIdx, order, targetNominal, measure) {
         shortfall: conv(shortfall, yf),
         fillDesc,
         chosenTaxRule: tx.chosenPrivatePensionTaxRule,
+        privateTaxableAnnual: conv(tx.privatePensionTaxableTotalAnnual || 0, yf),
         taxSavedAnnual: conv(tx.taxSavedByOptimizationAnnual, yf),
         balances: curBal,
         assetDelta,

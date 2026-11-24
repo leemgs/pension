@@ -1,0 +1,22 @@
+name: test
+
+# 푸시와 PR마다 단위 테스트(계산 엔진·분석·사이트 링크 무결성)를 실행합니다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  node-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run tests
+        run: node --test
