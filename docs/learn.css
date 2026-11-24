@@ -1,0 +1,38 @@
+/* 연금·투자 가이드 페이지 전용 스타일 */
+.learn { max-width: 900px; }
+.learn h2 { scroll-margin-top: 64px; }
+.learn h3 { font-size: 15px; margin: 18px 0 6px; color: var(--text-primary); scroll-margin-top: 64px; }
+.learn .crumb { font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; }
+.learn .hint { color: var(--text-muted); font-size: 12.5px; }
+.learn .closing { margin-top: 24px; padding: 12px 16px; border-radius: 10px; background: rgba(16,185,129,.1); color: var(--accent-emerald); font-weight: 700; }
+.learn .tbl-wrap { overflow-x: auto; margin: 8px 0 12px; -webkit-overflow-scrolling: touch; }
+.learn table { min-width: 420px; }
+.learn tbody tr:nth-child(even) td { background: rgba(255,255,255,.03); }
+.learn .toc { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 18px; margin: 14px 0; }
+.learn .toc ol { columns: 2; column-gap: 28px; margin-top: 6px; }
+.learn .callout { border-left: 4px solid var(--accent-blue); background: rgba(56,189,248,.08); border-radius: 0 10px 10px 0; padding: 10px 14px; margin: 12px 0; }
+.learn .callout p { margin-top: 4px; font-size: 13.5px; line-height: 1.65; }
+.learn .callout.warn { border-color: var(--accent-amber); background: rgba(245,158,11,.09); }
+.learn .callout.tip { border-color: var(--accent-emerald); background: rgba(16,185,129,.09); }
+.learn .callout.note { border-color: #a855f7; background: rgba(168,85,247,.09); }
+.learn .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.learn .pager { display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+.learn .pager a { padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 10px; text-decoration: none; background: var(--bg-panel); }
+.learn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin: 16px 0; }
+.learn-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 14px; text-decoration: none; color: var(--text-secondary); }
+.learn-card:hover, .learn-card:focus-visible { border-color: var(--accent-blue); background: var(--bg-card); }
+.learn-card strong { font-size: 16px; color: var(--text-primary); }
+.learn-tag { align-self: flex-start; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(56,189,248,.15); color: var(--accent-blue); }
+.learn-meta { font-size: 12px; color: var(--text-muted); margin-top: auto; }
+/* TOP3 카드 */
+.top3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0 6px; }
+.t3 { border-radius: 16px; padding: 16px; border: 2px solid; background: var(--bg-panel); }
+.t3 h2 { margin: 0 0 10px; font-size: 20px; color: var(--text-primary); }
+.t3 h2 small { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.t3 dl { display: grid; grid-template-columns: 44px 1fr; gap: 8px 10px; }
+.t3 dt { font-weight: 800; font-size: 12px; padding: 2px 6px; border-radius: 999px; text-align: center; align-self: start; background: var(--bg-card); }
+.t3 dd { font-size: 14px; line-height: 1.5; }
+.t3-isa { border-color: #14b8a6; } .t3-ps { border-color: #f59e0b; } .t3-irp { border-color: #ec4899; }
+@media (max-width: 800px) { .top3 { grid-template-columns: 1fr; } .learn .toc ol { columns: 1; } .learn .two-col { grid-template-columns: 1fr; } }
+@media print { .learn .callout, .learn .toc, .t3, .learn-card { background: #fff !important; color: #111 !important; border-color: #999 !important; } .learn * { color: #111 !important; } .site-nav, .pager { display: none !important; } }
+.learn a.learn-card { color: var(--text-secondary); } .learn a.learn-card strong { color: var(--text-primary); }

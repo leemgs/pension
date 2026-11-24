@@ -26,6 +26,11 @@
     ├── manual.html              # 사용자 매뉴얼 (용어·입력 항목·결과 해석·활용)
     ├── assumptions.html         # 가정·세법 기준
     ├── links.html               # 참고 링크 (공식 사이트 모음)
+    ├── learn.html               # 연금·투자 가이드 목록
+    ├── learn-top3.html          # 2026 통장 TOP3 (ISA·연금저축·IRP)
+    ├── learn-guide.html         # 연금 부자 길라잡이
+    ├── learn-accounts.html      # 3개 계좌 활용 전략
+    ├── learn.css                # 가이드 페이지 스타일
     ├── nav.js                   # 공통 상단 메뉴
     ├── app.js                   # UI 로직
     ├── engine.js                # 시뮬레이션 계산 엔진
@@ -63,6 +68,7 @@
 | 사용자 매뉴얼 | `docs/manual.html` |
 | 가정·세법 기준 | `docs/assumptions.html` |
 | 참고 링크 | `docs/links.html` |
+| 연금·투자 가이드 | `docs/learn.html` (하위: `learn-top3.html`, `learn-guide.html`, `learn-accounts.html`) |
 
 시뮬레이터 안의 영역은 `index.html#kpi-area`, `#cif-chart`, `#detail-table`, `#target-panel`, `#settings-panel`, `#scenario-panel`로,
 시나리오는 `index.html?preset=1`~`3`으로 바로 열 수 있습니다.

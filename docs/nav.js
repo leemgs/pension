@@ -7,9 +7,11 @@
     { href: "guide.html", label: "📖 사용 가이드" },
     { href: "manual.html", label: "📘 사용자 매뉴얼" },
     { href: "assumptions.html", label: "📐 가정·세법 기준" },
+    { href: "learn.html", label: "📚 연금·투자 가이드" },
     { href: "links.html", label: "🔗 참고 링크" },
   ];
   var cur = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+  if (cur.indexOf("learn") === 0) cur = "learn.html"; // learn-*.html 하위 페이지도 같은 메뉴로 강조
   var el = document.getElementById("siteNav");
   if (!el) return;
   el.className = "site-nav";
