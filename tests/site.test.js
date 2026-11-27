@@ -58,7 +58,9 @@ test("모든 페이지가 <head> 안에서 접속 코드 게이트(assets/site.j
 });
 
 test("개인 식별 정보(작성자 이름)가 사이트에 없다", () => {
+  // 이름 자체를 저장소에 남기지 않도록 유니코드 이스케이프로 표기합니다.
+  const author = "\uc720\uc2b9\ud601";
   for (const f of fs.readdirSync(DOCS).filter((x) => /\.(html|js|css|json)$/.test(x))) {
-    assert.ok(!read(f).includes("\uc720\uc2b9\ud601"), `${f}에 작성자 이름이 있음`);
+    assert.ok(!read(f).includes(author), `${f}에 작성자 이름이 있음`);
   }
 });
