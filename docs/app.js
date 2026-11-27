@@ -3554,6 +3554,41 @@
       <p class="hint">수령 기간·월 인출액·인출 비율은 각 계좌에 입력한 값을 그대로 씁니다. 방식마다 값이 달라지면 결과가 달라지므로 우열은 입력값에 따라 바뀔 수 있습니다.</p>`;
   }
 
+  // ---- ISA 만기 자금 활용 비교 ----
+  let isaTimer = null;
+  function scheduleIsaCompare() {
+    const det = document.getElementById("isaPanel");
+    if (!det || !det.open || !window.SimulatorAnalysis) return;
+    clearTimeout(isaTimer);
+    isaTimer = setTimeout(renderIsaCompare, 500);
+  }
+
+  function renderIsaCompare() {
+    const out = document.getElementById("isaBody");
+    if (!out) return;
+    const res = window.SimulatorAnalysis.runIsaStrategies(window.SimulatorEngine, currentState);
+    if (!res.applicable) {
+      out.innerHTML = '<p class="hint">자산 카드 "6-1. ISA"를 켜고 현재 평가액 또는 월 납입액을 입력하면 만기 자금 활용 방식을 비교할 수 있습니다.</p>';
+      return;
+    }
+    const cols = [
+      ["월평균 실수령", "avgNet", 1, 2], ["총 세금 합계", "totalTax", -1, 2], ["ISA 추가 세액공제", "isaCreditTotal", 1, 2],
+      ["ISA 만기 이익 과세", "isaTaxTotal", -1, 2], ["종료 금융자산", "finalFinancial", 1, 0], ["종료 순자산", "finalNetWorth", 1, 0],
+    ];
+    const best = {};
+    cols.forEach(([, k, dir]) => { const v = res.rows.map((r) => r[k]); best[k] = dir > 0 ? Math.max(...v) : Math.min(...v); });
+    out.innerHTML = `
+      ${res.pensionSavingsOn ? "" : '<p class="hint neg">⚠️ 연금저축 자산이 꺼져 있어 "이전" 방식은 이전되지 않고 인출·재가입으로 처리됩니다. 연금저축을 켜세요.</p>'}
+      <p class="hint">현재가치 기준, 백만원. 초록색이 가장 유리한 값입니다. 인출 방식·수익률 등 다른 입력은 그대로 두고 만기 자금의 사용 방식만 바꿉니다.</p>
+      <div class="table-wrapper"><table class="sim-table"><thead><tr><th>방식</th><th>설명</th>${cols.map((c) => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>
+        ${res.rows.map((r) => `<tr><td><strong>${r.label}</strong></td><td style="text-align:left">${r.note}</td>
+          ${cols.map(([, k, , d]) => {
+            const same = res.rows.every((x) => Math.abs(x[k] - r[k]) < 1e-9);
+            return `<td class="${!same && Math.abs(r[k] - best[k]) < 1e-9 ? "pos" : ""}">${r[k].toFixed(d)}</td>`;
+          }).join("")}</tr>`).join("")}
+      </tbody></table></div>`;
+  }
+
   // ---- 목표 역산 ----
   let reverseRunning = false;
   async function runReverseUi() {
@@ -3701,7 +3736,7 @@
     box.innerHTML = `<div><strong>📘 가이드 사례: ${esc(activeCase.title)}</strong>
       <p>${esc(activeCase.desc)}</p>
       <p>${resultLine}</p>
-      <p><a href="${activeCase.guide}">가이드 해당 부분 보기</a>${activeCase.expectTotalTax !== undefined ? ` · <a href="compare.html?cases=pension-55,pension-65">두 사례 나란히 비교</a>` : ""}</p></div>
+      <p><a href="${activeCase.guide}">가이드 해당 부분 보기</a>${activeCase.compare ? ` · <a href="compare.html?cases=${activeCase.compare}">사례 나란히 비교</a>` : ""}</p></div>
       <button type="button" class="btn" id="caseClose" aria-label="사례 안내 닫기">✕</button>`;
     document.getElementById("caseClose").addEventListener("click", () => { activeCase = null; box.hidden = true; });
   }
@@ -3716,6 +3751,7 @@
     scheduleStress();
     renderPrintSummary();
     scheduleStrategies();
+    scheduleIsaCompare();
     markMcStale();
     renderCaseBanner(latestSimResult);
   }
@@ -3911,6 +3947,8 @@
     if (rvi) rvi.addEventListener("input", () => { rvi.dataset.touched = "1"; });
     const mcb = document.getElementById("mcRun");
     if (mcb) mcb.addEventListener("click", runMonteCarloUi);
+    const isp = document.getElementById("isaPanel");
+    if (isp) isp.addEventListener("toggle", () => { if (isp.open) renderIsaCompare(); });
     const stp = document.getElementById("strategyPanel");
     if (stp) stp.addEventListener("toggle", () => { if (stp.open) renderStrategies(); });
 

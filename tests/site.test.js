@@ -57,6 +57,13 @@ test("모든 페이지가 <head> 안에서 접속 코드 게이트(assets/site.j
   }
 });
 
+test("초대 전용 사이트: 모든 페이지가 noindex이고 robots.txt가 전체 차단한다", () => {
+  for (const f of pages) assert.match(read(f), /<meta name="robots" content="[^"]*noindex/, `${f}: noindex 없음`);
+  const robots = read("robots.txt");
+  assert.match(robots, /User-agent:\s*\*/);
+  assert.match(robots, /Disallow:\s*\//);
+});
+
 test("개인 식별 정보(작성자 이름)가 사이트에 없다", () => {
   // 이름 자체를 저장소에 남기지 않도록 유니코드 이스케이프로 표기합니다.
   const author = "\uc720\uc2b9\ud601";

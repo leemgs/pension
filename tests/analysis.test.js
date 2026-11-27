@@ -210,3 +210,22 @@ test("입력 점검: ISA 설정 오류(이전 불가·한도 초과)를 알려 �
   assert.ok(txt.includes("연 납입한도"));
   assert.ok(txt.includes("연금저축 자산이 꺼져"));
 });
+
+test("가이드 사례 확대: 국민연금 조기·정상·연기 비율과 월배당 사례가 가이드와 일치", () => {
+  const C = sb.SimulatorCases;
+  for (const id of ["np-early", "np-normal", "np-late", "income-4", "income-8"]) {
+    const c = C.get(id);
+    assert.ok(c, `${id} 없음`);
+    const r = c.check(E.runSimulation(clone(c.build(E))));
+    assert.strictEqual(r.ok, true, `${id}: ${r.text}`);
+  }
+  // 총 수령액(60~90세 명목): 조기 1.155×12×31 < 정상 1.65×12×26 < 연기 2.244×12×21
+  const total = (id) => A.summarizeScenario(E, C.get(id).build(E)).totalGross;
+  assert.ok(Math.abs(total("np-early") - 1.155 * 12 * 31) < 0.5, "조기 총액");
+  assert.ok(Math.abs(total("np-normal") - 1.65 * 12 * 26) < 0.5, "정상 총액");
+  assert.ok(Math.abs(total("np-late") - 2.244 * 12 * 21) < 0.5, "연기 총액");
+  assert.ok(total("np-early") < total("np-normal") && total("np-normal") < total("np-late"));
+  // 8% 월배당은 연 1,500만원을 넘어 세금 기준선 경고가 뜬다
+  assert.ok(A.analyzeThresholds(E, C.get("income-8").build(E)).some((w) => w.text.includes("연 1,500만원을 넘는 해")));
+  assert.ok(!A.analyzeThresholds(E, C.get("income-4").build(E)).some((w) => w.level === "warn"));
+});

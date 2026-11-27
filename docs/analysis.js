@@ -88,6 +88,9 @@
       avgGross: s.avgGrossCif,
       avgCost: s.avgMonthlyCost,
       totalTax: rec.reduce((a, r) => a + r.tax * 12, 0),
+      totalGross: rec.reduce((a, r) => a + r.grossCif * 12, 0),
+      isaCreditTotal: rec.reduce((a, r) => a + (r.isaCredit || 0), 0),
+      isaTaxTotal: rec.reduce((a, r) => a + (r.isaTax || 0), 0),
       effRate: s.effectiveDeductionRate,
       age65Net: s.age65NetCif,
       age75Net: s.age75NetCif,
@@ -455,5 +458,26 @@
     return out;
   }
 
-  global.SimulatorAnalysis = { analyzeThresholds, solveReverse, runMonteCarlo, runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
+  /** ISA 만기 자금의 사용 방식(연금저축 이전 / 현금 인출 / 재가입)만 바꿔 같은 조건에서 비교합니다. */
+  function runIsaStrategies(E, state) {
+    const ia = state.assets && state.assets.isa;
+    const hasIsa = !!(ia && ia.enabled && (ia.currentBalance > 0 || ia.monthlyContrib > 0));
+    const psOn = !!(state.assets.pensionSavings && state.assets.pensionSavings.enabled);
+    const defs = [
+      { tr: null, wd: null, label: "현재 설정", note: "입력한 비율 그대로" },
+      { tr: 100, wd: 0, label: "전액 연금저축 이전", note: "만기 자금 전부 이전 + 세액공제" },
+      { tr: 0, wd: 100, label: "전액 현금 인출", note: "만기마다 전부 현금화" },
+      { tr: 0, wd: 0, label: "전액 재가입", note: "계속 ISA에서 운용" },
+      { tr: 50, wd: 50, label: "절반 이전 · 절반 인출", note: "50% 연금저축 이전, 50% 현금" },
+    ];
+    const rows = hasIsa ? defs.map((d) => {
+      const st = clone(state);
+      if (d.tr !== null) { st.assets.isa.transferRatio = d.tr; st.assets.isa.withdrawRatio = d.wd; }
+      const r = summarizeScenario(E, st);
+      return Object.assign({ label: d.label, note: d.note, transferRatio: st.assets.isa.transferRatio, withdrawRatio: st.assets.isa.withdrawRatio }, r);
+    }) : [];
+    return { applicable: hasIsa, pensionSavingsOn: psOn, rows };
+  }
+
+  global.SimulatorAnalysis = { runIsaStrategies, analyzeThresholds, solveReverse, runMonteCarlo, runWithdrawalStrategies, analyzeInputs, analyzeWarnings, summarizeScenario, runStress, runSensitivity };
 })(typeof window !== "undefined" ? window : globalThis);

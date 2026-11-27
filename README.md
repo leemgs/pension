@@ -19,6 +19,7 @@
 │   ├── verification.test.js     # 세금·건보료 손계산/공표값 검증
 │   └── site.test.js             # 내부 링크·앵커·메타 무결성
 └── docs/
+    ├── robots.txt               # 검색엔진 색인 차단 (모든 페이지에 noindex 메타도 포함)
     ├── assets/site.js           # 접속 코드 게이트 (initAuth / unlock)
     ├── config/access.json       # 접속 코드의 SHA-256 해시 (평문 저장 안 함)
     ├── index.html               # 시뮬레이터 (진입점)
@@ -26,7 +27,7 @@
     ├── compare.html             # 저장 시나리오 나란히 비교
     ├── taxrates.js              # 연도별 보험료율·기준값 (2024~2027)
     ├── help.js                  # 입력 항목 도움말 문구
-    ├── cases.js                 # 가이드 사례(연금저축 55세/65세 수령) 재현용 상태
+    ├── cases.js                 # 가이드 사례 7종(연금저축·ISA·국민연금·월배당) 재현용 상태
     ├── analysis.js              # 위험 경고·비교·스트레스·민감도 분석
     ├── compare.js               # 비교 페이지 로직
     ├── guide.html               # 사용 가이드 (빠른 시작)

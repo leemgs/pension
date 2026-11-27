@@ -113,3 +113,23 @@ test("ISA 잔액은 금융자산에 포함된다", () => {
   near(first.balances.isa, 12, 1e-9);
   near(first.balances.financialTotal, 12, 1e-9, "금융자산에 포함");
 });
+
+test("ISA 만기 자금 활용 비교: 5개 방식, 원본 불변, 전액 이전이 세액공제를 받는다", () => {
+  const sb2 = { console, setTimeout };
+  sb2.globalThis = sb2;
+  vm.createContext(sb2);
+  for (const f of ["taxrates", "engine", "analysis"]) vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "docs", f + ".js"), "utf-8"), sb2);
+  const A = sb2.SimulatorAnalysis, E2 = sb2.SimulatorEngine;
+  const st = E2.createDefaultState();
+  assert.strictEqual(A.runIsaStrategies(E2, st).applicable, false, "ISA 꺼짐 → 비교 없음");
+  st.assets.isa.enabled = true;
+  const before = JSON.stringify(st);
+  const res = A.runIsaStrategies(E2, st);
+  assert.strictEqual(JSON.stringify(st), before, "원본 불변");
+  assert.strictEqual(res.applicable, true);
+  assert.strictEqual(res.rows.length, 5);
+  const byLabel = Object.fromEntries(res.rows.map((r) => [r.label, r]));
+  assert.ok(byLabel["전액 연금저축 이전"].isaCreditTotal > 0, "이전하면 세액공제");
+  assert.strictEqual(byLabel["전액 현금 인출"].isaCreditTotal, 0, "이전 없으면 공제 없음");
+  assert.strictEqual(byLabel["전액 재가입"].isaCreditTotal, 0);
+});
